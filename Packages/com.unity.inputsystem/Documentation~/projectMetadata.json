@@ -1,7 +1,3 @@
 {
-    "hideGlobalNamespace": true,
-    "xref": [
-        "com.unity.xr.openxr",
-        "com.unity.xr.interaction.toolkit"
-    ]
+    "hideGlobalNamespace": true
 }

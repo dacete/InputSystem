@@ -20,26 +20,7 @@ namespace UnityEngine.InputSystem.LowLevel
     /// </summary>
     internal class NativeInputRuntime : IInputRuntime
     {
-        private static NativeInputRuntime s_Instance;
-
-        // Private ctor exists to enforce Singleton pattern
-        private NativeInputRuntime() {}
-
-        /// <summary>
-        /// Employ the Singleton pattern for this class and initialize a new instance on first use.
-        /// </summary>
-        /// <remarks>
-        /// This property is typically used to initialize InputManager and isn't used afterwards, i.e. there's
-        /// no perf impact to the null check.
-        /// </remarks>
-        public static NativeInputRuntime instance
-        {
-            get
-            {
-                s_Instance ??= new NativeInputRuntime();
-                return s_Instance;
-            }
-        }
+        public static readonly NativeInputRuntime instance = new NativeInputRuntime();
 
         public int AllocateDeviceId()
         {
@@ -213,7 +194,6 @@ namespace UnityEngine.InputSystem.LowLevel
             }
         }
 
-#if !UNITY_INPUTSYSTEM_SUPPORTS_FOCUS_EVENTS
         public Action<bool> onPlayerFocusChanged
         {
             get => m_FocusChangedMethod;
@@ -226,15 +206,8 @@ namespace UnityEngine.InputSystem.LowLevel
                 m_FocusChangedMethod = value;
             }
         }
-#endif
 
-        private FocusFlags m_FocusState = FocusFlags.None;
-        public FocusFlags focusState
-        {
-            get => m_FocusState;
-            set => m_FocusState = value;
-        }
-        public bool isPlayerFocused => (m_FocusState & FocusFlags.ApplicationFocus) != FocusFlags.None;
+        public bool isPlayerFocused => Application.isFocused;
 
         public float pollingFrequency
         {
@@ -309,15 +282,12 @@ namespace UnityEngine.InputSystem.LowLevel
             return true;
         }
 
-#if !UNITY_INPUTSYSTEM_SUPPORTS_FOCUS_EVENTS
         private Action<bool> m_FocusChangedMethod;
 
         private void OnFocusChanged(bool focus)
         {
             m_FocusChangedMethod(focus);
         }
-
-#endif
 
         public Vector2 screenSize => new Vector2(Screen.width, Screen.height);
         public ScreenOrientation screenOrientation => Screen.orientation;

@@ -55,17 +55,17 @@ namespace UnityEngine.InputSystem
 
         public static void Initialize(InputManager manager)
         {
-            Debug.Assert(manager.runtime != null);
+            Debug.Assert(manager.m_Runtime != null);
         }
 
         public static void OnStartup(InputManager manager)
         {
-            manager.runtime.SendAnalytic(new StartupEventAnalytic(manager));
+            manager.m_Runtime.SendAnalytic(new StartupEventAnalytic(manager));
         }
 
         public static void OnShutdown(InputManager manager)
         {
-            manager.runtime.SendAnalytic(new ShutdownEventDataAnalytic(manager));
+            manager.m_Runtime.SendAnalytic(new ShutdownEventDataAnalytic(manager));
         }
 
         /// <summary>
@@ -278,7 +278,7 @@ namespace UnityEngine.InputSystem
     {
         internal static void Send<TSource>(this TSource analytic) where TSource : InputAnalytics.IInputAnalytic
         {
-            InputSystem.manager?.runtime?.SendAnalytic(analytic);
+            InputSystem.s_Manager?.m_Runtime?.SendAnalytic(analytic);
         }
     }
 }

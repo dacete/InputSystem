@@ -1,4 +1,4 @@
-#if UNITY_EDITOR
+#if UNITY_EDITOR && UNITY_INPUT_SYSTEM_PROJECT_WIDE_ACTIONS
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEditor;
@@ -118,9 +118,11 @@ namespace UnityEngine.InputSystem.Editor
 
         void SaveAssetOnFocusLost()
         {
+#if UNITY_INPUT_SYSTEM_INPUT_ACTIONS_EDITOR_AUTO_SAVE_ON_FOCUS_LOST
             var asset = GetAsset();
             if (asset != null)
                 ValidateAndSaveAsset(asset);
+#endif
         }
 
         public static void SetIMGUIDropdownVisible(bool visible, bool optionWasSelected)
@@ -173,17 +175,21 @@ namespace UnityEngine.InputSystem.Editor
             DelayFocusLost(element == null);
         }
 
+        private void OnStateChanged(InputActionsEditorState newState, UIRebuildMode editorRebuildMode)
+        {
+#if UNITY_INPUT_SYSTEM_INPUT_ACTIONS_EDITOR_AUTO_SAVE_ON_FOCUS_LOST
+            // No action, auto-saved on edit-focus lost
+#else
+            // Project wide input actions always auto save - don't check the asset auto save status
+            var asset = GetAsset();
+            if (asset != null)
+                ValidateAndSaveAsset(asset);
+#endif
+        }
+
         private void ValidateAndSaveAsset(InputActionAsset asset)
         {
-            // This code should be cleaned up once we migrate the InputControl stuff from ImGUI completely.
-            // Since at that point it stops being a separate window that steals focus.
-            // (See case ISXB-1713)
-            if (m_View.IsControlSchemeViewActive())
-            {
-                return;
-            }
-
-            ProjectWideActionsAsset.Verify(asset);     // Ignore verification result for save
+            ProjectWideActionsAsset.Verify(asset); // Ignore verification result for save
             EditorHelpers.SaveAsset(AssetDatabase.GetAssetPath(asset), asset.ToJson());
         }
 
@@ -253,6 +259,7 @@ namespace UnityEngine.InputSystem.Editor
             if (hasAsset)
             {
                 m_StateContainer = new StateContainer(m_State, AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(asset)));
+                m_StateContainer.StateChanged += OnStateChanged;
                 m_View = new InputActionsEditorView(m_RootVisualElement, m_StateContainer, true, null);
                 m_StateContainer.Initialize(m_RootVisualElement.Q("action-editor"));
             }
@@ -288,8 +295,6 @@ namespace UnityEngine.InputSystem.Editor
                     break;
             }
         }
-
-        internal static bool IsInputActionsPageActive => s_Provider != null && s_Provider.m_IsActivated;
 
         [SettingsProvider]
         public static SettingsProvider CreateGlobalInputActionsEditorProvider()

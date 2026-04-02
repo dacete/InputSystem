@@ -1,4 +1,6 @@
-#if UNITY_EDITOR
+// Note: If not UNITY_INPUT_SYSTEM_PROJECT_WIDE_ACTIONS we do not use a custom property drawer and
+//       picker for InputActionAsset but rather rely on default (classic) object picker.
+#if UNITY_EDITOR && UNITY_INPUT_SYSTEM_PROJECT_WIDE_ACTIONS
 using UnityEditor;
 using UnityEditor.Search;
 

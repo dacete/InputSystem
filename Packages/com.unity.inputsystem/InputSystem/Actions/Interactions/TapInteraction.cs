@@ -10,7 +10,7 @@ using UnityEngine.UIElements;
 namespace UnityEngine.InputSystem.Interactions
 {
     /// <summary>
-    /// Performs the action if the control is pressed and released within the set
+    /// Performs the action if the control is pressed held for at least the set
     /// duration (which defaults to <see cref="InputSettings.defaultTapTime"/>)
     /// and then released.
     /// </summary>
@@ -114,20 +114,21 @@ namespace UnityEngine.InputSystem.Interactions
 
         public override void OnGUI()
         {
-            if (!InputSystem.settings.useIMGUIEditorForAssets)
-                return;
-
+#if UNITY_INPUT_SYSTEM_PROJECT_WIDE_ACTIONS
+            if (!InputSystem.settings.useIMGUIEditorForAssets) return;
+#endif
             m_DurationSetting.OnGUI();
             m_PressPointSetting.OnGUI();
         }
 
+#if UNITY_INPUT_SYSTEM_PROJECT_WIDE_ACTIONS
         public override void OnDrawVisualElements(VisualElement root, Action onChangedCallback)
         {
             m_DurationSetting.OnDrawVisualElements(root, onChangedCallback);
             m_PressPointSetting.OnDrawVisualElements(root, onChangedCallback);
-            CustomOrDefaultSetting.AddSharedDefaultSettingsFooter(root,
-                new[] { m_DurationSetting, m_PressPointSetting });
         }
+
+#endif
 
         private CustomOrDefaultSetting m_DurationSetting;
         private CustomOrDefaultSetting m_PressPointSetting;

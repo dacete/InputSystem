@@ -112,6 +112,7 @@ namespace UnityEngine.InputSystem.Editor
             return indexInArray;
         }
 
+#if UNITY_INPUT_SYSTEM_PROJECT_WIDE_ACTIONS
         public static void AddActionMaps(SerializedObject asset, SerializedObject sourceAsset)
         {
             Debug.Assert(asset.targetObject is InputActionAsset);
@@ -143,6 +144,8 @@ namespace UnityEngine.InputSystem.Editor
             src.CopyToJson(buffer, ignoreObjectReferences: true);
             dst.RestoreFromJson(buffer.ToString());
         }
+
+#endif
 
         public static SerializedProperty AddActionMap(SerializedObject asset, int index = -1)
         {

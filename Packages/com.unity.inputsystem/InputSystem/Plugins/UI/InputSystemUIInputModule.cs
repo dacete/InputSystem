@@ -187,8 +187,7 @@ namespace UnityEngine.InputSystem.UI
         ///
         /// You can set this to a negative value to invert the scroll direction. A value of zero prevents mousewheel scrolling from working at all.
         ///
-        /// > [!NOTE]
-        /// > This has no effect on UI Toolkit content, only uGUI components.
+        /// Note: this has no effect on UI Toolkit content, only uGUI components.
         /// </remarks>
         public float scrollDeltaPerTick
         {
@@ -532,6 +531,7 @@ namespace UnityEngine.InputSystem.UI
 
         private void ProcessPointerMovement(ExtendedPointerEventData eventData, GameObject currentPointerTarget)
         {
+#if UNITY_2021_1_OR_NEWER
             // If the pointer moved, send move events to all UI elements the pointer is
             // currently over.
             var wasMoved = eventData.IsPointerMoving();
@@ -540,6 +540,7 @@ namespace UnityEngine.InputSystem.UI
                 for (var i = 0; i < eventData.hovered.Count; ++i)
                     ExecuteEvents.Execute(eventData.hovered[i], eventData, ExecuteEvents.pointerMoveHandler);
             }
+#endif
 
             // If we have no target or pointerEnter has been deleted,
             // we just send exit events to anything we are tracking
@@ -580,8 +581,9 @@ namespace UnityEngine.InputSystem.UI
                     if (!sendPointerHoverToParent && current == pointerParent)
                         break;
 
+#if UNITY_2021_3_OR_NEWER
                     eventData.fullyExited = current != commonRoot && eventData.pointerEnter != currentPointerTarget;
-
+#endif
                     ExecuteEvents.Execute(current.gameObject, eventData, ExecuteEvents.pointerExitHandler);
                     eventData.hovered.Remove(current.gameObject);
 
@@ -605,14 +607,18 @@ namespace UnityEngine.InputSystem.UI
                 Transform current = currentPointerTarget.transform;
                 while (current != null && !PointerShouldIgnoreTransform(current))
                 {
+#if UNITY_2021_3_OR_NEWER
                     eventData.reentered = current == commonRoot && current != oldPointerEnter;
                     // if we are sending the event to parent, they are already in hover mode at that point. No need to bubble up the event.
                     if (sendPointerHoverToParent && eventData.reentered)
                         break;
+#endif
 
                     ExecuteEvents.Execute(current.gameObject, eventData, ExecuteEvents.pointerEnterHandler);
+#if UNITY_2021_1_OR_NEWER
                     if (wasMoved)
                         ExecuteEvents.Execute(current.gameObject, eventData, ExecuteEvents.pointerMoveHandler);
+#endif
                     eventData.hovered.Add(current.gameObject);
 
                     // stop when encountering an object with the pointerEnterHandler
@@ -683,7 +689,9 @@ namespace UnityEngine.InputSystem.UI
                 // Set pointerPress. This nukes lastPress. Meaning that after OnPointerDown, lastPress will
                 // become null.
                 eventData.pointerPress = newPressed;
+#if UNITY_2020_1_OR_NEWER // pointerClick doesn't exist before this.
                 eventData.pointerClick = pointerClickHandler;
+#endif
                 eventData.rawPointerPress = currentOverGo;
 
                 // Save the drag handler for drag events during this mouse down.
@@ -704,7 +712,11 @@ namespace UnityEngine.InputSystem.UI
                 //       2) StandaloneInputModule increases click counts even if something is eventually not deemed a
                 //          click and OnPointerClick is thus never invoked.
                 var pointerClickHandler = ExecuteEvents.GetEventHandler<IPointerClickHandler>(currentOverGo);
+#if UNITY_2020_1_OR_NEWER
                 var isClick = eventData.pointerClick != null && eventData.pointerClick == pointerClickHandler && eventData.eligibleForClick;
+#else
+                var isClick = eventData.pointerPress != null && eventData.pointerPress == pointerClickHandler && eventData.eligibleForClick;
+#endif
                 if (isClick)
                 {
                     // Count clicks.
@@ -728,7 +740,11 @@ namespace UnityEngine.InputSystem.UI
                 // Invoke OnPointerClick or OnDrop.
                 if (isClick)
                 {
+#if UNITY_2020_1_OR_NEWER
                     ExecuteEvents.Execute(eventData.pointerClick, eventData, ExecuteEvents.pointerClickHandler);
+#else
+                    ExecuteEvents.Execute(eventData.pointerPress, eventData, ExecuteEvents.pointerClickHandler);
+#endif
                 }
                 else if (eventData.dragging && eventData.pointerDrag != null)
                     ExecuteEvents.ExecuteHierarchy(currentOverGo, eventData, ExecuteEvents.dropHandler);
@@ -1540,8 +1556,7 @@ namespace UnityEngine.InputSystem.UI
         /// </example>
         public void AssignDefaultActions()
         {
-            // Without Domain Reloads, the InputActionAsset could be "null" even if defaultActions is valid
-            if (defaultActions == null || defaultActions.asset == null)
+            if (defaultActions == null)
             {
                 defaultActions = new DefaultInputActions();
             }
@@ -1925,7 +1940,9 @@ namespace UnityEngine.InputSystem.UI
                     eventData.pointerType = pointerType;
                     eventData.pointerId = pointerId;
                     eventData.touchId = touchId;
+#if UNITY_2022_3_OR_NEWER
                     eventData.displayIndex = displayIndex;
+#endif
 
                     // Make sure these don't linger around when we switch to a different kind of pointer.
                     eventData.trackedDeviceOrientation = default;
@@ -2028,7 +2045,9 @@ namespace UnityEngine.InputSystem.UI
                 eventData = new ExtendedPointerEventData(eventSystem);
 
             eventData.pointerId = pointerId;
+#if UNITY_2022_3_OR_NEWER
             eventData.displayIndex = displayIndex;
+#endif
             eventData.touchId = touchId;
             eventData.pointerType = pointerType;
             eventData.control = control;
@@ -2159,7 +2178,9 @@ namespace UnityEngine.InputSystem.UI
 
             ref var state = ref GetPointerStateForIndex(index);
             state.screenPosition = context.ReadValue<Vector2>();
+#if UNITY_2022_3_OR_NEWER
             state.eventData.displayIndex = GetDisplayIndexFor(context.control);
+#endif
         }
 
         // NOTE: In the click events, we specifically react to the Canceled phase to make sure we do NOT perform
@@ -2188,7 +2209,9 @@ namespace UnityEngine.InputSystem.UI
             state.changedThisFrame = true;
             if (IgnoreNextClick(ref context, wasPressed))
                 state.leftButton.ignoreNextClick = true;
+#if UNITY_2022_3_OR_NEWER
             state.eventData.displayIndex = GetDisplayIndexFor(context.control);
+#endif
         }
 
         private void OnRightClickCallback(InputAction.CallbackContext context)
@@ -2203,7 +2226,9 @@ namespace UnityEngine.InputSystem.UI
             state.changedThisFrame = true;
             if (IgnoreNextClick(ref context, wasPressed))
                 state.rightButton.ignoreNextClick = true;
+#if UNITY_2022_3_OR_NEWER
             state.eventData.displayIndex = GetDisplayIndexFor(context.control);
+#endif
         }
 
         private void OnMiddleClickCallback(InputAction.CallbackContext context)
@@ -2218,7 +2243,9 @@ namespace UnityEngine.InputSystem.UI
             state.changedThisFrame = true;
             if (IgnoreNextClick(ref context, wasPressed))
                 state.middleButton.ignoreNextClick = true;
+#if UNITY_2022_3_OR_NEWER
             state.eventData.displayIndex = GetDisplayIndexFor(context.control);
+#endif
         }
 
         private bool CheckForRemovedDevice(ref InputAction.CallbackContext context)
@@ -2248,7 +2275,9 @@ namespace UnityEngine.InputSystem.UI
             // ISXB-704: convert input value to BaseInputModule convention.
             state.scrollDelta = (scrollDelta / InputSystem.scrollWheelDeltaPerTick) * scrollDeltaPerTick;
 
+#if UNITY_2022_3_OR_NEWER
             state.eventData.displayIndex = GetDisplayIndexFor(context.control);
+#endif
         }
 
         private void OnMoveCallback(InputAction.CallbackContext context)
@@ -2271,7 +2300,9 @@ namespace UnityEngine.InputSystem.UI
 
             ref var state = ref GetPointerStateForIndex(index);
             state.worldOrientation = context.ReadValue<Quaternion>();
+#if UNITY_2022_3_OR_NEWER
             state.eventData.displayIndex = GetDisplayIndexFor(context.control);
+#endif
         }
 
         private void OnTrackedDevicePositionCallback(InputAction.CallbackContext context)
@@ -2282,7 +2313,9 @@ namespace UnityEngine.InputSystem.UI
 
             ref var state = ref GetPointerStateForIndex(index);
             state.worldPosition = context.ReadValue<Vector3>();
+#if UNITY_2022_3_OR_NEWER
             state.eventData.displayIndex = GetDisplayIndexFor(context.control);
+#endif
         }
 
         private void OnControlsChanged(object obj)
@@ -2420,6 +2453,7 @@ namespace UnityEngine.InputSystem.UI
             }
         }
 
+#if UNITY_2021_1_OR_NEWER
         public override int ConvertUIToolkitPointerId(PointerEventData sourcePointerData)
         {
             // Case 1369081: when using SingleUnifiedPointer, the same (default) pointerId should be sent to UIToolkit
@@ -2431,6 +2465,8 @@ namespace UnityEngine.InputSystem.UI
                 ? ep.uiToolkitPointerId
                 : base.ConvertUIToolkitPointerId(sourcePointerData);
         }
+
+#endif
 
 #if UNITY_INPUT_SYSTEM_INPUT_MODULE_SCROLL_DELTA
         const float kSmallestScrollDeltaPerTick = 0.00001f;

@@ -123,12 +123,8 @@ namespace UnityEngine.InputSystem.Editor
                 return;
             }
 
-            // Cache the display name per path value and only recompute when the string actually changes.
-            if (!string.Equals(path, m_CachedPath, StringComparison.InvariantCultureIgnoreCase))
-            {
-                m_CachedPath = path;
-                m_CachedDisplayName = InputControlPath.ToHumanReadableString(path);
-            }
+            ////TODO: this should be cached; generates needless GC churn
+            var displayName = InputControlPath.ToHumanReadableString(path);
 
             // Either show dropdown control that opens path picker or show path directly as
             // text, if manual path editing is toggled on.
@@ -150,7 +146,7 @@ namespace UnityEngine.InputSystem.Editor
             else
             {
                 // Dropdown that shows binding text and allows opening control picker.
-                if (EditorGUI.DropdownButton(bindingTextRect, new GUIContent(m_CachedDisplayName), FocusType.Keyboard))
+                if (EditorGUI.DropdownButton(bindingTextRect, new GUIContent(displayName), FocusType.Keyboard))
                 {
                     SetExpectedControlLayoutFromAttribute(serializedProperty);
                     ////TODO: for bindings that are part of composites, use the layout information from the [InputControl] attribute on the field
@@ -165,7 +161,9 @@ namespace UnityEngine.InputSystem.Editor
 
         private void ShowDropdown(Rect rect, SerializedProperty serializedProperty, Action modifiedCallback)
         {
+#if UNITY_INPUT_SYSTEM_PROJECT_WIDE_ACTIONS
             InputActionsEditorSettingsProvider.SetIMGUIDropdownVisible(true, false);
+#endif
             IsShowingDropdown = true;
 
             if (m_PickerDropdown == null)
@@ -212,9 +210,6 @@ namespace UnityEngine.InputSystem.Editor
         private GUIContent m_PathLabel;
         private string m_ExpectedControlLayout;
         private string[] m_ControlPathsToMatch;
-
-        private string m_CachedPath;
-        private string m_CachedDisplayName;
 
         private InputControlPickerDropdown m_PickerDropdown;
         private readonly InputControlPickerState m_PickerState;

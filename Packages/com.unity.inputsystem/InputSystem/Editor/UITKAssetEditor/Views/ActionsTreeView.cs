@@ -1,4 +1,6 @@
-#if UNITY_EDITOR
+// UITK TreeView is not supported in earlier versions
+// Therefore the UITK version of the InputActionAsset Editor is not available on earlier Editor versions either.
+#if UNITY_EDITOR && UNITY_INPUT_SYSTEM_PROJECT_WIDE_ACTIONS
 using CmdEvents = UnityEngine.InputSystem.Editor.InputActionsEditorConstants.CommandEvents;
 using System;
 using System.Collections.Generic;
@@ -32,7 +34,6 @@ namespace UnityEngine.InputSystem.Editor
         {
             m_ActionMapsListView = root.Q<ListView>("action-maps-list-view");
             m_AddActionButton = root.Q<Button>("add-new-action-button");
-            m_AddActionButton.AddToClassList(EditorGUIUtility.isProSkin ? "add-button-dark-theme" : "add-button");
             m_PropertiesScrollview = root.Q<ScrollView>("properties-scrollview");
             m_ActionsTreeView = root.Q<TreeView>("actions-tree-view");
             //assign unique viewDataKey to store treeView states like expanded/collapsed items - make it unique to avoid conflicts with other TreeViews

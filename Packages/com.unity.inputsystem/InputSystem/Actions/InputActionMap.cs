@@ -324,6 +324,7 @@ namespace UnityEngine.InputSystem
         /// </summary>
         public InputActionMap()
         {
+            s_NeedToResolveBindings = true;
         }
 
         /// <summary>
@@ -815,6 +816,9 @@ namespace UnityEngine.InputSystem
             BindingsForEachActionInitialized = 1 << 3,
         }
 
+        internal static int s_DeferBindingResolution;
+        internal static bool s_NeedToResolveBindings;
+
         internal struct DeviceArray
         {
             private bool m_HaveValue;
@@ -884,11 +888,10 @@ namespace UnityEngine.InputSystem
         /// we don't even need a separate array but rather just need to find out which slice in the
         /// bindings array corresponds to which action.
         ///
-        /// > [!NOTE]
-        /// > Bindings for individual actions aren't queried by the system itself during normal
-        /// > runtime operation so we only do this for cases where the user asks for the
-        /// > information. If the user never asks for bindings or controls on a per-action basis,
-        /// > none of this data gets initialized.
+        /// NOTE: Bindings for individual actions aren't queried by the system itself during normal
+        ///       runtime operation so we only do this for cases where the user asks for the
+        ///       information. If the user never asks for bindings or controls on a per-action basis,
+        ///       none of this data gets initialized.
         /// </remarks>
         internal ReadOnlyArray<InputBinding> GetBindingsForSingleAction(InputAction action)
         {
@@ -1198,6 +1201,9 @@ namespace UnityEngine.InputSystem
             m_ControlsForEachAction = null;
             controlsForEachActionInitialized = false;
 
+            // Indicate that there is at least one action map that has a change
+            s_NeedToResolveBindings = true;
+
             // If we haven't had to resolve bindings yet, we can wait until when we
             // actually have to.
             if (m_State == null)
@@ -1211,10 +1217,7 @@ namespace UnityEngine.InputSystem
             needToResolveBindings = true;
             bindingResolutionNeedsFullReResolve |= fullResolve;
 
-            // Indicate that there is at least one action map that has a change
-            InputSystem.manager.bindingsNeedResolving = true;
-
-            if (InputSystem.manager.areDeferredBindingsToResolve)
+            if (s_DeferBindingResolution > 0)
                 return false;
 
             // Have to do it straight away.
@@ -1233,7 +1236,7 @@ namespace UnityEngine.InputSystem
             {
                 if (m_State != null && m_State.isProcessingControlStateChange)
                 {
-                    Debug.Assert(InputSystem.manager.areDeferredBindingsToResolve, "While processing control state changes, binding resolution should be suppressed");
+                    Debug.Assert(s_DeferBindingResolution > 0, "While processing control state changes, binding resolution should be suppressed");
                     return false;
                 }
 
@@ -1994,6 +1997,9 @@ namespace UnityEngine.InputSystem
         /// </summary>
         public void OnAfterDeserialize()
         {
+            // Indicate that there is at least one action map that has a change
+            s_NeedToResolveBindings = true;
+
             m_State = null;
             m_MapIndexInState = InputActionState.kInvalidIndex;
             m_EnabledActionsCount = 0;

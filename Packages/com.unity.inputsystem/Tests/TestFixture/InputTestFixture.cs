@@ -11,13 +11,6 @@ using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.InputSystem.Utilities;
 using UnityEngine.TestTools;
 using UnityEngine.TestTools.Utils;
-using UnityEngine.InputSystem.XR;
-using UnityEngineInternal.Input;
-#if UNITY_6000_5_OR_NEWER
-using UnityEngine.Assemblies;
-#endif
-using UnityEngine.InputSystem.Users;
-
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine.InputSystem.Editor;
@@ -40,7 +33,8 @@ namespace UnityEngine.InputSystem
     /// built-in set of basic layouts and no devices. The state of the system before
     /// starting a test is recorded and restored when the test finishes.
     ///
-    /// ```csharp
+    /// <example>
+    /// <code>
     /// public class MyInputTests : InputTestFixture
     /// {
     ///     public override void Setup()
@@ -57,24 +51,14 @@ namespace UnityEngine.InputSystem
     ///         Assert.That(InputSystem.devices, Has.Exactly(1).TypeOf&lt;MyDevice&gt;());
     ///     }
     /// }
-    /// ```
+    /// </code>
+    /// </example>
     ///
     /// The test fixture will also sever the tie of the input system to the Unity runtime.
     /// This means that while the test fixture is active, the input system will not receive
     /// input and device discovery or removal notifications from platform code. This ensures
     /// that while the test is running, input that may be generated on the machine running
     /// the test will not infer with it.
-    ///
-    /// Be cautious when using <c>NUnit.Framework.OneTimeSetUpAttribute</c> and
-    /// <c>NUnit.Framework.OneTimeTearDownAttribute</c> in combination with this test fixture.
-    /// For example, any devices created prior to execution of <see cref="Setup()"/> would be added to the actual
-    /// Input System instead of the test fixture system and after <see cref="Setup()"/> has executed such devices
-    /// will no longer be valid. You may of course use these NUnit features, but it is advised to not attempt affecting
-    /// the Input System under test from those methods since it would affect the real system and not the system
-    /// under test.
-    ///
-    /// This test fixture is designed for play-mode tests and is generally not supported for edit-mode tests.
-    /// Both <c>[Test]</c> and <c>[UnityTest]</c> are supported, but only in play-mode.
     /// </remarks>
     public class InputTestFixture
     {
@@ -93,8 +77,6 @@ namespace UnityEngine.InputSystem
         {
             try
             {
-                m_StateManager = new InputTestStateManager();
-
                 // Apparently, NUnit is reusing instances :(
                 m_KeyInfos = default;
                 m_IsUnityTest = default;
@@ -110,7 +92,7 @@ namespace UnityEngine.InputSystem
 
                 // Push current input system state on stack.
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
-                m_StateManager.SaveAndReset(false, runtime);
+                InputSystem.SaveAndReset(enableRemoting: false, runtime: runtime);
 #endif
                 // Override the editor messing with logic like canRunInBackground and focus and
                 // make it behave like in the player.
@@ -122,7 +104,7 @@ namespace UnityEngine.InputSystem
                 // so turn them off.
                 #if UNITY_EDITOR
                 if (Application.isPlaying && IsUnityTest())
-                    InputSystem.manager.m_UpdateMask &= ~InputUpdateType.Editor;
+                    InputSystem.s_Manager.m_UpdateMask &= ~InputUpdateType.Editor;
                 #endif
 
                 // We use native collections in a couple places. We when leak them, we want to know where exactly
@@ -138,7 +120,7 @@ namespace UnityEngine.InputSystem
                 NativeInputRuntime.instance.onUpdate =
                     (InputUpdateType updateType, ref InputEventBuffer buffer) =>
                 {
-                    if (InputSystem.manager.ShouldRunUpdate(updateType))
+                    if (InputSystem.s_Manager.ShouldRunUpdate(updateType))
                         InputSystem.Update(updateType);
                     // We ignore any input coming from native.
                     buffer.Reset();
@@ -193,7 +175,7 @@ namespace UnityEngine.InputSystem
             try
             {
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
-                m_StateManager.Restore();
+                InputSystem.Restore();
 #endif
                 runtime.Dispose();
 
@@ -248,11 +230,7 @@ namespace UnityEngine.InputSystem
             var type = Type.GetType(className);
             if (type == null)
             {
-#if UNITY_6000_5_OR_NEWER
-                foreach (var assembly in CurrentAssemblies.GetLoadedAssemblies())
-#else
                 foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
-#endif
                 {
                     type = assembly.GetType(className);
                     if (type != null)
@@ -319,7 +297,6 @@ namespace UnityEngine.InputSystem
             Assert.That(stick.right.ReadUnprocessedValue(), Is.EqualTo(right).Within(0.0001), "Incorrect 'right' value");
         }
 
-        internal InputTestStateManager m_StateManager;
         private Dictionary<Key, Tuple<string, int>> m_KeyInfos;
         private bool m_Initialized;
 
@@ -556,12 +533,6 @@ namespace UnityEngine.InputSystem
         /// Note that this parameter will be ignored if the test is a <c>[UnityTest]</c>. Multi-frame
         /// playmode tests will automatically process input as part of the Unity player loop.</param>
         /// <typeparam name="TValue">Value type of the given control.</typeparam>
-        /// <exception cref="ArgumentNullException">If control is null.</exception>
-        /// <exception cref="ArgumentException">If the device associated with <paramref name="control"/> has not
-        /// been added to the system or if the control does not have any associated state. The latter may only
-        /// happen if attempting to set a control of a device created outside the test context.</exception>
-        /// <exception cref="NotSupportedException">If attempting to set a control of a test device in an
-        /// editor assembly. [UnityTest] in editor assemblies is not supported by this test fixture.</exception>
         /// <example>
         /// <code>
         /// var gamepad = InputSystem.AddDevice&lt;Gamepad&gt;();
@@ -573,14 +544,12 @@ namespace UnityEngine.InputSystem
         {
             if (control == null)
                 throw new ArgumentNullException(nameof(control));
-            CheckValidity(control.device, control);
+            if (!control.device.added)
+                throw new ArgumentException(
+                    $"Device of control '{control}' has not been added to the system", nameof(control));
 
             if (IsUnityTest())
-            {
-                if (IsEditMode())
-                    throw new NotSupportedException("InputTestFixture.Set does not support edit mode (editor assembly) [UnityTest].");
                 queueEventOnly = true;
-            }
 
             void SetUpAndQueueEvent(InputEventPtr eventPtr)
             {
@@ -694,7 +663,6 @@ namespace UnityEngine.InputSystem
                 if (screen == null)
                     screen = InputSystem.AddDevice<Touchscreen>();
             }
-            CheckValidity(screen);
 
             InputSystem.QueueStateEvent(screen, new TouchState
             {
@@ -740,122 +708,33 @@ namespace UnityEngine.InputSystem
                 throw new ArgumentException(
                     $"Action '{action}' must be bound to controls in order to be able to trigger it", nameof(action));
 
-            // We iterate controls to see if there are any that we know how to trigger
+            // See if we have a button we can trigger.
             for (var i = 0; i < controls.Count; ++i)
             {
-                var control = controls[i];
+                if (!(controls[i] is ButtonControl button))
+                    continue;
 
-                // for buttons, we literally trigger them pressed and released
-                if (control is ButtonControl buttonControl)
-                {
-                    Set(buttonControl, 1);
-                    Set(buttonControl, 0);
+                // Press and release button.
+                Set(button, 1);
+                Set(button, 0);
 
-                    return;
-                }
-
-                // for the other types of controls we simply perform a small change in value as applicable
-                const float minorChange = 0.01f;
-
-                if (control is AxisControl axisControl)
-                {
-                    Set(axisControl, axisControl.ReadValue() + minorChange);
-
-                    return;
-                }
-
-                if (control is Vector2Control vec2Control)
-                {
-                    Set(vec2Control, vec2Control.ReadValue() + Vector2.one * minorChange);
-
-                    return;
-                }
-
-                if (control is Vector3Control vec3Control)
-                {
-                    Set(vec3Control, vec3Control.ReadValue() + Vector3.one * minorChange);
-
-                    return;
-                }
-
-                if (control is QuaternionControl quatControl)
-                {
-                    var q = quatControl.ReadValue();
-                    q.ToAngleAxis(out float angle, out Vector3 axis);
-                    Set(quatControl, Quaternion.AngleAxis(angle + minorChange, axis));
-
-                    return;
-                }
-
-                if (control is IntegerControl integerControl)
-                {
-                    Set(integerControl, integerControl.ReadValue() + 1);
-
-                    return;
-                }
-
-                if (control is TouchControl touchControl)
-                {
-                    var state = touchControl.ReadValue();
-                    state.position += Vector2.one * minorChange;
-                    Set(touchControl, state);
-
-                    return;
-                }
-
-                // this one is a bit weird, but there's not much to change other than picking the next phase in the list
-                if (control is TouchPhaseControl touchPhaseControl)
-                {
-                    var phase = touchPhaseControl.ReadValue();
-                    var values = Enum.GetValues(typeof(TouchPhase));
-                    var index = Array.IndexOf(values, phase);
-                    var newIndex = (index + 1) % values.Length;
-                    Set(touchPhaseControl, (TouchPhase)values.GetValue(newIndex));
-
-                    return;
-                }
-
-                if (control is BoneControl boneControl)
-                {
-                    var bone = boneControl.ReadValue();
-                    bone.position += minorChange * Vector3.one;
-                    Set(boneControl, bone);
-
-                    return;
-                }
-
-                if (control is EyesControl eyesControl)
-                {
-                    var eyes = eyesControl.ReadValue();
-                    eyes.leftEyePosition += minorChange * Vector3.one;
-                    Set(eyesControl, eyes);
-
-                    return;
-                }
+                return;
             }
 
-            // Initially I wanted to implement PoseControl too, but it's got a very complicated ifdef that enables it.
-            // Didn't want to carry that #ifdef here. Let's see how many people really need to trigger PoseControl.
+            // See if we have an axis we can slide a bit.
+            for (var i = 0; i < controls.Count; ++i)
+            {
+                if (!(controls[i] is AxisControl axis))
+                    continue;
 
-            // If it's not a control that we know how to trigger - it's not implemented yet
+                // We do, so nudge its value a bit.
+                Set(axis, axis.ReadValue() + 0.01f);
+
+                return;
+            }
+
+            ////TODO: support a wider range of controls
             throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Utility function for manually scheduling an InputFocusEvent.
-        /// This is useful for testing how the system reacts to focus changes.
-        /// </summary>
-        /// <param name="applicationHasFocus">The focus state to be scheduled.</param>
-        public unsafe void ScheduleFocusChangedEvent(bool applicationHasFocus)
-        {
-#if UNITY_INPUTSYSTEM_SUPPORTS_FOCUS_EVENTS
-            // For now we only set application focus. In the future we want to add support for other focus as well
-            FocusFlags state = applicationHasFocus ? FocusFlags.ApplicationFocus : FocusFlags.None;
-            var evt = InputFocusEvent.Create(state);
-            InputSystem.QueueEvent(new InputEventPtr((InputEvent*)&evt.baseEvent));
-#else
-            runtime.InvokePlayerFocusChanged(applicationHasFocus);
-#endif
         }
 
         /// <summary>
@@ -1020,40 +899,21 @@ namespace UnityEngine.InputSystem
             }
         }
 
-        private static void CheckValidity(InputDevice device, InputControl control)
+        #if UNITY_EDITOR
+        internal void SimulateDomainReload()
         {
-            if (!device.added)
-            {
-                throw new ArgumentException(
-                    $"Device '{device}' has not been added to the system", nameof(device));
-            }
+            // This quite invasively goes into InputSystem internals. Unfortunately, we
+            // have no proper way of simulating domain reloads ATM. So we directly call various
+            // internal methods here in a sequence similar to what we'd get during a domain reload.
 
-            // Guards against a device from another scope being used. This is a direct way to evaluate whether
-            // the device is associated with the current manager state or not since device state isn't consistently
-            // pushed/popped in the current design.
-            var manager = InputSystem.manager;
-            if (manager == null || !manager.HasDevice(device))
-            {
-                throw new ArgumentException($"Control '{control}' does not have any associated state. " +
-                    "Make sure the control or device was added after executing Setup().",  nameof(control));
-            }
+            InputSystem.s_SystemObject.OnBeforeSerialize();
+            InputSystem.s_SystemObject = null;
+            InputSystem.InitializeInEditor(runtime);
         }
 
-        private static void CheckValidity(InputControl control)
-        {
-            CheckValidity(control.device, control);
-        }
+        #endif
 
-        /// <summary>
-        /// Returns true if running inside an Edit Mode test (Editor assembly).
-        /// Returns false if running in Play Mode.
-        /// </summary>
-        private static bool IsEditMode()
-        {
-            return Application.isEditor && !Application.isPlaying;
-        }
-
-#if UNITY_EDITOR
+        #if UNITY_EDITOR
         /// <summary>
         /// Represents an analytics registration event captured by test harness.
         /// </summary>
@@ -1148,6 +1008,6 @@ namespace UnityEngine.InputSystem
             CollectAnalytics((_) => true);
         }
 
-#endif
+        #endif
     }
 }

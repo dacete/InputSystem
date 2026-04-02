@@ -1,4 +1,3 @@
-using System;
 using System.Runtime.CompilerServices;
 using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.InputSystem.Processors;
@@ -17,7 +16,6 @@ namespace UnityEngine.InputSystem.Controls
     /// Can optionally be configured to perform normalization.
     /// Stored as either a float, a short, a byte, or a single bit.
     /// </remarks>
-    [Serializable]
     public class AxisControl : InputControl<float>
     {
         /// <summary>

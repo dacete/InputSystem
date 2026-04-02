@@ -418,6 +418,16 @@ namespace UnityEngine.InputSystem.XR
         /// </summary>
         protected virtual void Awake()
         {
+#if UNITY_INPUT_SYSTEM_ENABLE_VR && ENABLE_VR
+            if (HasStereoCamera(out var cameraComponent))
+            {
+                // The Unity 6.4+ replacement for this call has to be figured later
+                // See https://jira.unity3d.com/browse/XR-7591
+#pragma warning disable CS0618
+                UnityEngine.XR.XRDevice.DisableAutoXRCameraTracking(cameraComponent, true);
+#pragma warning restore CS0618
+            }
+#endif
         }
 
         /// <summary>
@@ -449,6 +459,16 @@ namespace UnityEngine.InputSystem.XR
         /// </summary>
         protected virtual void OnDestroy()
         {
+#if UNITY_INPUT_SYSTEM_ENABLE_VR && ENABLE_VR
+            if (HasStereoCamera(out var cameraComponent))
+            {
+                // The Unity 6.4+ replacement for this call has to be figured later
+                // See https://jira.unity3d.com/browse/XR-7591
+#pragma warning disable CS0618
+                UnityEngine.XR.XRDevice.DisableAutoXRCameraTracking(cameraComponent, false);
+#pragma warning restore CS0618
+            }
+#endif
         }
 
         /// <summary>
@@ -587,27 +607,32 @@ namespace UnityEngine.InputSystem.XR
             var positionValid = m_IgnoreTrackingState || (m_CurrentTrackingState & TrackingStates.Position) != 0;
             var rotationValid = m_IgnoreTrackingState || (m_CurrentTrackingState & TrackingStates.Rotation) != 0;
 
-            switch (m_TrackingType)
+#if HAS_SET_LOCAL_POSITION_AND_ROTATION
+            if (m_TrackingType == TrackingType.RotationAndPosition && rotationValid && positionValid)
             {
-                case TrackingType.RotationAndPosition:
-                    if (rotationValid && positionValid)
-                        transform.SetLocalPositionAndRotation(newPosition, newRotation);
-                    else if (rotationValid)
-                        transform.localRotation = newRotation;
-                    else if (positionValid)
-                        transform.localPosition = newPosition;
-                    break;
-
-                case TrackingType.PositionOnly:
-                    if (positionValid)
-                        transform.localPosition = newPosition;
-                    break;
-
-                case TrackingType.RotationOnly:
-                    if (rotationValid)
-                        transform.localRotation = newRotation;
-                    break;
+                transform.SetLocalPositionAndRotation(newPosition, newRotation);
+                return;
             }
+#endif
+
+            if (rotationValid &&
+                (m_TrackingType == TrackingType.RotationAndPosition ||
+                 m_TrackingType == TrackingType.RotationOnly))
+            {
+                transform.localRotation = newRotation;
+            }
+
+            if (positionValid &&
+                (m_TrackingType == TrackingType.RotationAndPosition ||
+                 m_TrackingType == TrackingType.PositionOnly))
+            {
+                transform.localPosition = newPosition;
+            }
+        }
+
+        bool HasStereoCamera(out Camera cameraComponent)
+        {
+            return TryGetComponent(out cameraComponent) && cameraComponent.stereoEnabled;
         }
 
         // Evaluates whether the given action has at least one resolved control and may generate input.

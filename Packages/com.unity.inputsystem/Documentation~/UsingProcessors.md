@@ -6,15 +6,15 @@ uid: input-system-processors
 An Input Processor takes a value and returns a processed result for it. The received value and result value must be of the same type. For example, you can use a [clamp](#clamp) Processor to clamp values from a control to a certain range.
 
 > [!NOTE]
-> To convert received input values into different types, refer to [composite Bindings](xref:input-system-action-bindings#composite-bindings).
+> To convert received input values into different types, refer to [composite Bindings](ActionBindings.md#composite-bindings).
 
 ## Using Processors
 
-You can install Processors on [bindings](xref:input-system-action-bindings), [actions](xref:input-system-actions) or on [controls](xref:input-system-controls). Refer to [How to apply Processors](xref:input-system-processors) to learn more.
+You can install Processors on [bindings](ActionBindings.md), [actions](Actions.md) or on [controls](Controls.md). Refer to [How to apply Processors](HowToApplyProcessors.md) to learn more.
 
-Each Processor is [registered](xref:UnityEngine.InputSystem.InputSystem.RegisterProcessor``1(System.String)) using a unique name. To replace an existing one, register your own under an existing name.
+Each Processor is [registered](../api/UnityEngine.InputSystem.InputSystem.html#UnityEngine_InputSystem_InputSystem_RegisterProcessor__1_System_String_) using a unique name. To replace an existing one, register your own under an existing name.
 
-Processors can have parameters which can be booleans, integers, or floating-point numbers. When created in data such as [bindings](xref:input-system-action-bindings), processors are described as strings that look like function calls:
+Processors can have parameters which can be booleans, integers, or floating-point numbers. When created in data such as [bindings](./ActionBindings.md), processors are described as strings that look like function calls:
 
 ```CSharp
     // This references the processor registered as "scale" and sets its "factor"
@@ -88,8 +88,7 @@ To apply the Processor, add it to the Binding, as shown in the image below.
 
 ![An example of a Normalize Vector 2 Processor setup in the Input Action Asset Editor](./Images/Processors-NormalizeAsset.png)
 
-> [!NOTE]
-> This scenario uses the [Starter Assets](https://assetstore.unity.com/packages/essentials/starter-assets-thirdperson-updates-in-new-charactercontroller-pa-196526?srsltid=AfmBOoqLWdW2pU5Wt2reGYdWVodc1e0ko3cBKtfMQuPSgVqmL7yVA3dB), and the included PlayerScript is utilized to move the player.
+>__Note__: This scenario uses the [Starter Assets](https://assetstore.unity.com/packages/essentials/starter-assets-thirdperson-updates-in-new-charactercontroller-pa-196526?srsltid=AfmBOoqLWdW2pU5Wt2reGYdWVodc1e0ko3cBKtfMQuPSgVqmL7yVA3dB), and the included PlayerScript is utilized to move the player.
 
 ### Scale
 
@@ -108,8 +107,7 @@ There are two Bindings attached to the Action. The input value ranges of the two
 ![An example of a Scale Vector 2 Processor setup in the Input Action Asset Editor](./Images/Processors-Scale-Look-Pointer.png)
 ![An example of a Scale Vector 2 Processor setup in the Input Action Asset Editor](./Images/Processors-Scale-Look-Stick.png)
 
-> [!NOTE]
-> This scenario uses the [Starter Assets](https://assetstore.unity.com/packages/essentials/starter-assets-thirdperson-updates-in-new-charactercontroller-pa-196526?srsltid=AfmBOoqLWdW2pU5Wt2reGYdWVodc1e0ko3cBKtfMQuPSgVqmL7yVA3dB), and the included PlayerScript is utilized to rotate the camera.
+>__Note__: This scenario uses the [Starter Assets](https://assetstore.unity.com/packages/essentials/starter-assets-thirdperson-updates-in-new-charactercontroller-pa-196526?srsltid=AfmBOoqLWdW2pU5Wt2reGYdWVodc1e0ko3cBKtfMQuPSgVqmL7yVA3dB), and the included PlayerScript is utilized to rotate the camera.
 
 #### Example: Custom mouse sensitivity
 
@@ -128,8 +126,7 @@ You may want to use the Deadzone Processor to improve accessibility for physical
 
 The default minimum value is overridden to allow a higher threshold for minimum input values. For the maximum value, the default is used to standardize the values across all gamepads (since not all gamepads may ever send the maximum value).
 
-> [!NOTE]
-> This scenario uses the [Starter Assets](https://assetstore.unity.com/packages/essentials/starter-assets-thirdperson-updates-in-new-charactercontroller-pa-196526?srsltid=AfmBOoqLWdW2pU5Wt2reGYdWVodc1e0ko3cBKtfMQuPSgVqmL7yVA3dB), and the included PlayerScript is utilized to rotate the camera.
+>__Note__: This scenario uses the [Starter Assets](https://assetstore.unity.com/packages/essentials/starter-assets-thirdperson-updates-in-new-charactercontroller-pa-196526?srsltid=AfmBOoqLWdW2pU5Wt2reGYdWVodc1e0ko3cBKtfMQuPSgVqmL7yVA3dB), and the included PlayerScript is utilized to rotate the camera.
 
 ### Clamp
 
@@ -142,5 +139,4 @@ In the following image, you can see how a Clamp Processor can be used to restric
 
 ![An example of a Clamp Processor setup in the Input Action Asset Editor](./Images/Processors-Clamp-Editor.png)
 
-> [!NOTE]
-> The Bindings can contain input values with very different ranges. In that case, a Scale Processor on the Bindings can help preprocess the values before clamping them (Processors on Actions are applied after Processors on Bindings).
+>__Note__: The Bindings can contain input values with very different ranges. In that case, a Scale Processor on the Bindings can help preprocess the values before clamping them (Processors on Actions are applied after Processors on Bindings).

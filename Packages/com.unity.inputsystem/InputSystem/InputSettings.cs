@@ -6,6 +6,26 @@ using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.InputSystem.Processors;
 using UnityEngine.InputSystem.Utilities;
 
+////TODO: make sure that alterations made to InputSystem.settings in play mode do not leak out into edit mode or the asset
+
+////TODO: handle case of supportFixedUpdates and supportDynamicUpdates both being set to false; should it be an enum?
+
+////TODO: figure out how this gets into a build
+
+////TODO: allow setting up single- and multi-user configs for the project
+
+////TODO: allow enabling/disabling plugins
+
+////REVIEW: should the project settings include a list of action assets to use? (or to force into a build)
+
+////REVIEW: add extra option to enable late-updates?
+
+////REVIEW: put default sensor sampling frequency here?
+
+////REVIEW: put default gamepad polling frequency here?
+
+////REVIEW: Have an InputActionAsset field in here that allows having a single default set of actions that are enabled with no further setup?
+
 namespace UnityEngine.InputSystem
 {
     /// <summary>
@@ -770,7 +790,7 @@ namespace UnityEngine.InputSystem
         internal void OnChange()
         {
             if (InputSystem.settings == this)
-                InputSystem.manager.ApplySettings();
+                InputSystem.s_Manager.ApplySettings();
         }
 
         internal const int s_OldUnsupportedFixedAndDynamicUpdateSetting = 0;
@@ -855,23 +875,6 @@ namespace UnityEngine.InputSystem
         /// <summary>
         /// Determines how the applications behaves when running in the background. See <see cref="backgroundBehavior"/>.
         /// </summary>
-        /// <remarks>
-        /// Limitations:
-        ///
-        /// Receiving input while the application is not in the foreground is platform and device-dependent, and should not be relied upon.
-        /// IgnoreFocus does not grant the ability to receive input in the background; it only prevents the Input System from resetting/disabling devices on focus changes.
-        ///
-        /// Specifically:
-        ///
-        /// Keyboard: InputSystem doesn't receive events while unfocused.
-        /// Even on platforms where OS-level hooks could technically capture background keyboard input, Unity doesn't forward it to the managed Input System.
-        ///
-        /// Mouse: Only receives events when the cursor is hovering over the application window.
-        ///
-        /// XR HMDs: May continue receiving tracking data while unfocused, depending on the XR runtime.
-        /// These devices report canRunInBackground == true and are the primary use case for ResetAndDisableNonBackgroundDevices,
-        /// which leaves them untouched while resetting everything else.
-        /// </remarks>
         /// <seealso href="https://docs.unity3d.com/ScriptReference/Application-isFocused.html"/>
         /// <seealso href="https://docs.unity3d.com/ScriptReference/Application-runInBackground.html"/>
         /// <seealso cref="backgroundBehavior"/>
@@ -906,11 +909,6 @@ namespace UnityEngine.InputSystem
 
             /// <summary>
             /// Ignore all changes in focus and leave devices untouched. This also disables focus checks in <see cref="UI.InputSystemUIInputModule"/>.
-            /// This mode doesn't disable devices when the application loses focus. It also doesn't reset or sync device state on focus changes.
-            /// As a result, input controls may retain a stale state after focus transitions.
-            /// For example, if a key is held when the application loses focus and released while unfocused, the Input System still reports that key as pressed
-            /// when the focus returns. This is the expected behavior, not a bug.
-            /// If you need a reliable state after focus changes, use ResetAndDisableNonBackgroundDevices (default) or ResetAndDisableAllDevices.
             /// </summary>
             IgnoreFocus = 2,
         }
@@ -980,7 +978,7 @@ namespace UnityEngine.InputSystem
             MultilineBoth,
         }
 
-#if UNITY_EDITOR
+#if UNITY_EDITOR && UNITY_INPUT_SYSTEM_PROJECT_WIDE_ACTIONS
         /// <summary>
         /// Determines if we should render the UI with IMGUI even if an UI Toolkit UI is available.
         ///
@@ -1061,7 +1059,11 @@ namespace UnityEngine.InputSystem
                 CompareFeatureFlag(a, b, InputFeatureNames.kParanoidReadValueCachingChecks) &&
                 CompareFeatureFlag(a, b, InputFeatureNames.kDisableUnityRemoteSupport) &&
                 CompareFeatureFlag(a, b, InputFeatureNames.kRunPlayerUpdatesInEditMode) &&
+#if UNITY_INPUT_SYSTEM_PROJECT_WIDE_ACTIONS
                 CompareFeatureFlag(a, b, InputFeatureNames.kUseIMGUIEditorForAssets);
+#else
+                true;     // Improves formatting
+#endif
         }
     }
 }

@@ -1,4 +1,4 @@
-#if UNITY_EDITOR || UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX || UNITY_STANDALONE_LINUX || UNITY_WSA || PACKAGE_DOCS_GENERATION
+#if UNITY_EDITOR || UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX || UNITY_WSA || PACKAGE_DOCS_GENERATION
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -12,7 +12,7 @@ using UnityEngine.InputSystem.Utilities;
 
 namespace UnityEngine.InputSystem.Switch.LowLevel
 {
-#if UNITY_EDITOR || UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX || UNITY_STANDALONE_LINUX || UNITY_WSA
+#if UNITY_EDITOR || UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX || UNITY_WSA
     /// <summary>
     /// Structure of HID input reports for Switch Pro controllers.
     /// </summary>
@@ -142,12 +142,12 @@ namespace UnityEngine.InputSystem.Switch.LowLevel
 
 namespace UnityEngine.InputSystem.Switch
 {
-#if UNITY_EDITOR || UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX || UNITY_STANDALONE_LINUX || UNITY_WSA || PACKAGE_DOCS_GENERATION
+#if UNITY_EDITOR || UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX || UNITY_WSA || PACKAGE_DOCS_GENERATION
     /// <summary>
     /// A Nintendo Switch Pro controller connected to a desktop mac/windows PC using the HID interface.
     /// </summary>
     [InputControlLayout(stateType = typeof(SwitchProControllerHIDInputState), displayName = "Switch Pro Controller")]
-    public class SwitchProControllerHID : SwitchProController, IInputStateCallbackReceiver, IEventPreProcessor
+    public class SwitchProControllerHID : Gamepad, IInputStateCallbackReceiver, IEventPreProcessor
     {
         [InputControl(name = "capture", displayName = "Capture")]
         public ButtonControl captureButton { get; protected set; }
@@ -253,7 +253,7 @@ namespace UnityEngine.InputSystem.Switch
                     || newState->buttons2 != currentState->buttons2;
 
                 if (!actuated)
-                    InputSystem.manager.DontMakeCurrentlyUpdatingDeviceCurrent();
+                    InputSystem.s_Manager.DontMakeCurrentlyUpdatingDeviceCurrent();
             }
 
             InputState.Change(this, eventPtr);

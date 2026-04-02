@@ -1,4 +1,4 @@
-#if UNITY_EDITOR || UNITY_STANDALONE_OSX || UNITY_STANDALONE_WIN || UNITY_STANDALONE_LINUX || UNITY_WSA || PACKAGE_DOCS_GENERATION
+#if UNITY_EDITOR || UNITY_STANDALONE_OSX || UNITY_STANDALONE_WIN || UNITY_WSA || PACKAGE_DOCS_GENERATION
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -585,7 +585,7 @@ namespace UnityEngine.InputSystem.DualShock
                     || newState->buttons2 != currentState->buttons2;
 
                 if (!actuated)
-                    InputSystem.manager.DontMakeCurrentlyUpdatingDeviceCurrent();
+                    InputSystem.s_Manager.DontMakeCurrentlyUpdatingDeviceCurrent();
             }
 
             InputState.Change(this, eventPtr);
@@ -675,8 +675,8 @@ namespace UnityEngine.InputSystem.DualShock
         [StructLayout(LayoutKind.Explicit)]
         internal struct DualSenseHIDMinimalInputReport
         {
-            public const int ExpectedSize1 = 10;
-            public const int ExpectedSize2 = 78;
+            public static int ExpectedSize1 = 10;
+            public static int ExpectedSize2 = 78;
 
             [FieldOffset(0)] public byte reportId;
             [FieldOffset(1)] public byte leftStickX;
@@ -920,7 +920,7 @@ namespace UnityEngine.InputSystem.DualShock
                     || newState->buttons3 != currentState->buttons3;
 
                 if (!actuatedOrChanged)
-                    InputSystem.manager.DontMakeCurrentlyUpdatingDeviceCurrent();
+                    InputSystem.s_Manager.DontMakeCurrentlyUpdatingDeviceCurrent();
             }
 
             InputState.Change(this, eventPtr);

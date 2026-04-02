@@ -1,22 +1,21 @@
 using UnityEngine.InputSystem;
 
-namespace UnityEngine.InputSystem.UI
+////FIXME: This should be UnityEngine.InputSystem.UI
+
+#if UNITY_DISABLE_DEFAULT_INPUT_PLUGIN_INITIALIZATION
+public
+#else
+internal
+#endif
+static class UISupport
 {
-    #if UNITY_DISABLE_DEFAULT_INPUT_PLUGIN_INITIALIZATION
-    public
-    #else
-    internal
-    #endif
-    static class UISupport
+    public static void Initialize()
     {
-        public static void Initialize()
-        {
-            InputSystem.RegisterLayout(@"
-                {
-                    ""name"" : ""VirtualMouse"",
-                    ""extend"" : ""Mouse""
-                }
-            ");
-        }
+        InputSystem.RegisterLayout(@"
+            {
+                ""name"" : ""VirtualMouse"",
+                ""extend"" : ""Mouse""
+            }
+        ");
     }
 }

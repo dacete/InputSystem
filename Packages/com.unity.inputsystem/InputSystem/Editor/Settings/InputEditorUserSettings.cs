@@ -87,7 +87,7 @@ namespace UnityEngine.InputSystem.Editor
         private static void OnChange()
         {
             Save();
-            InputSystem.manager.ApplySettings();
+            InputSystem.s_Manager.ApplySettings();
         }
 
         internal static void Load()

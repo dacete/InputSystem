@@ -1,4 +1,4 @@
-#if UNITY_EDITOR
+#if UNITY_EDITOR && UNITY_INPUT_SYSTEM_PROJECT_WIDE_ACTIONS
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -145,16 +145,10 @@ namespace UnityEngine.InputSystem.Editor
         {
             return (in InputActionsEditorState state) =>
             {
-                SerializedProperty controlSchemeSerializedProperty = null;
-                var serializedProperty = state.serializedObject
-                    .FindProperty(nameof(InputActionAsset.m_ControlSchemes));
-
-                if (state.selectedControlSchemeIndex < serializedProperty.arraySize)
-                {
-                    controlSchemeSerializedProperty = state.selectedControlSchemeIndex == -1 ? null :
-                        serializedProperty
-                            .GetArrayElementAtIndex(state.selectedControlSchemeIndex);
-                }
+                var controlSchemeSerializedProperty = state.selectedControlSchemeIndex == -1 ? null :
+                    state.serializedObject
+                        .FindProperty(nameof(InputActionAsset.m_ControlSchemes))
+                        .GetArrayElementAtIndex(state.selectedControlSchemeIndex);
 
                 if (controlSchemeSerializedProperty == null)
                 {

@@ -8,6 +8,26 @@ using UnityEngine.InputSystem.Utilities;
 using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine.InputSystem.Layouts;
 
+////REVIEW: should EvaluateMagnitude() be called EvaluateActuation() or something similar?
+
+////REVIEW: as soon as we gain the ability to have blittable type constraints, InputControl<TValue> should be constrained such
+
+////REVIEW: Reading and writing is asymmetric. Writing does not involve processors, reading does.
+
+////REVIEW: While the arrays used by controls are already nicely centralized on InputDevice, InputControls still
+////        hold a bunch of reference data that requires separate scanning. Can we move *all* reference data to arrays
+////        on InputDevice and make InputControls reference-free? Most challenging thing probably is getting rid of
+////        the InputDevice reference itself.
+
+////REVIEW: how do we do stuff like smoothing over time?
+
+////TODO: allow easier access to the default state such that you can easily create a state event containing only default state
+
+////TODO: come up with a way where we do ReadValue on the most common forms/setups of controls and not have any virtual method dispatch but
+////      rather go with minimal overhead directly to reading out memory
+////      (this should at least cover FLT, single BIT, and INT controls; and should be able to apply the common transformations
+////      as per AxisControl)
+
 namespace UnityEngine.InputSystem
 {
     /// <summary>
@@ -83,7 +103,6 @@ namespace UnityEngine.InputSystem
     /// <seealso cref="InputDevice"/>
     /// <seealso cref="InputControlPath"/>
     /// <seealso cref="InputStateBlock"/>
-    [Serializable]
     [DebuggerDisplay("{DebuggerDisplay(),nq}")]
     public abstract class InputControl
     {
@@ -293,27 +312,32 @@ namespace UnityEngine.InputSystem
         public InputStateBlock stateBlock => m_StateBlock;
 
         /// <summary>
-        /// Retrieves whether the control is considered [noisy](xref:input-system-controls#noisy-controls).
+        /// Whether the control is considered noisy.
         /// </summary>
         /// <value>True if the control produces noisy input.</value>
         /// <remarks>
         /// A control is considered "noisy" if it produces different values without necessarily requiring user
-        /// interaction. For example, <see cref="UnityEngine.InputSystem.XR.XRHMD">XR head mounted displays</see>
-        /// or <see cref="Sensor">sensors</see> such as a <see cref="Gyroscope"/>. For more information, refer to
-        /// [Noisy controls](xref:input-system-controls#noisy-controls).
+        /// interaction. A good example are sensors (see <see cref="Sensor"/>). For example, the PS4 controller
+        /// which has a gyroscope sensor built into the device. Whereas sticks and buttons on the device require
+        /// user interaction to produce non-default values, the gyro will produce varying values even if the
+        /// device just sits there without user interaction.
         ///
-        /// The value of this property is determined by the <see cref="InputControlLayout">layout</see> that the
-        /// control has been built from (using <see cref="InputControlLayout.ControlItem.isNoisy"/>).
+        /// The value of this property is determined by the layout (<see cref="InputControlLayout"/>) that the
+        /// control has been built from.
         ///
-        /// > [!NOTE]
-        /// > For <see cref="InputDevice">devices</see>, this property is true if any control on the device
+        /// Note that for devices (<see cref="InputDevice"/>) this property is true if any control on the device
         /// is marked as noisy.
         ///
-        /// The primary effect of being noisy is on <see cref="InputDevice.MakeCurrent"/> and
+        /// The primary effect of being noise is on <see cref="InputDevice.MakeCurrent"/> and
         /// on interactive rebinding (see <see cref="InputActionRebindingExtensions.RebindingOperation"/>).
         /// However, being noisy also affects automatic resetting of controls that happens when the application
-        /// loses focus. For more information, refer to [Noisy controls](xref:input-system-controls#noisy-controls).
+        /// loses focus. While other controls are reset to their default value (except if <c>Application.runInBackground</c>
+        /// is true and the device the control belongs to is marked as <see cref="InputDevice.canRunInBackground"/>),
+        /// noisy controls will not be reset but rather remain at their current value. This is based on the assumption
+        /// that noisy controls most often represent sensor values and snapping the last sampling value back to default
+        /// will usually have undesirable effects on an application's simulation logic.
         /// </remarks>
+        /// <seealso cref="InputControlLayout.ControlItem.isNoisy"/>
         /// <seealso cref="InputControlAttribute.noisy"/>
         public bool noisy
         {
@@ -337,24 +361,29 @@ namespace UnityEngine.InputSystem
         }
 
         /// <summary>
-        /// Retrieves whether the control is considered [synthetic](xref:input-system-controls#synthetic-controls).
+        /// Whether the control is considered synthetic.
         /// </summary>
         /// <value>True if the control does not represent an actual physical control on the device.</value>
         /// <remarks>
         /// A control is considered "synthetic" if it does not correspond to an actual, physical control on the
-        /// device. For example, <see cref="Keyboard.anyKey"/> or the up/down/left/right buttons added
-        /// by <see cref="StickControl"/>. For more information, refer to
-        /// [Synthetic controls](xref:input-system-controls#synthetic-controls).
+        /// device. An example for this is <see cref="Keyboard.anyKey"/> or the up/down/left/right buttons added
+        /// by <see cref="StickControl"/>.
         ///
-        /// The value of this property is determined by the <see cref="InputControlLayout">layout</see> that the
-        /// control has been built from (using <see cref="InputControlLayout.ControlItem.isSynthetic"/>).
+        /// The value of this property is determined by the layout (<see cref="InputControlLayout"/>) that the
+        /// control has been built from.
         ///
-        /// The primary effect of being synthetic is on interactive rebinding (see
-        /// <see cref="InputActionRebindingExtensions.RebindingOperation"/>) where the input system favors
-        /// non-synthetic controls over synthetic ones for rebinding. For more information, refer to
-        /// [Synthetic controls](xref:input-system-controls#synthetic-controls).
+        /// The primary effect of being synthetic is in interactive rebinding (see
+        /// <see cref="InputActionRebindingExtensions.RebindingOperation"/>) where non-synthetic
+        /// controls will be favored over synthetic ones. This means, for example, that if both
+        /// <c>"&lt;Gamepad&gt;/leftStick/x"</c> and <c>"&lt;Gamepad&gt;/leftStick/left"</c> are
+        /// suitable picks, <c>"&lt;Gamepad&gt;/leftStick/x"</c> will be favored as it represents
+        /// input from an actual physical control whereas <c>"&lt;Gamepad&gt;/leftStick/left"</c>
+        /// represents input from a made-up control. If, however, the "left" button is the only
+        /// viable pick, it will be accepted.
+        ///
+        /// A control layout will specify if it is synthetic using <see cref="InputControlLayout.ControlItem.isSynthetic"/>.
+        /// See <see cref="InputControlAttribute.synthetic"/>.
         /// </remarks>
-        /// <seealso cref="InputControlAttribute.synthetic"/>
         public bool synthetic
         {
             get => (m_ControlFlags & ControlFlags.IsSynthetic) != 0;
@@ -1072,7 +1101,7 @@ namespace UnityEngine.InputSystem
         private void SetOptimizedControlDataType()
         {
             // setting check need to be inline so we clear optimizations if setting is disabled after the fact
-            m_OptimizedControlDataType = InputSystem.manager.optimizedControlsFeatureEnabled
+            m_OptimizedControlDataType = InputSystem.s_Manager.optimizedControlsFeatureEnabled
                 ? CalculateOptimizedControlDataType()
                 : (FourCC)InputStateBlock.kFormatInvalid;
         }
@@ -1100,7 +1129,7 @@ namespace UnityEngine.InputSystem
         [Conditional("UNITY_EDITOR")]
         internal void EnsureOptimizationTypeHasNotChanged()
         {
-            if (!InputSystem.manager.optimizedControlsFeatureEnabled)
+            if (!InputSystem.s_Manager.optimizedControlsFeatureEnabled)
                 return;
 
             var currentOptimizedControlDataType = CalculateOptimizedControlDataType();
@@ -1284,7 +1313,6 @@ namespace UnityEngine.InputSystem
     /// <typeparam name="TValue">Type of value captured by the control. Note that this does not mean
     /// that the control has to store data in the given value format. A control that captures float
     /// values, for example, may be stored in state as byte values instead.</typeparam>
-    [Serializable]
     public abstract class InputControl<TValue> : InputControl
         where TValue : struct
     {
@@ -1328,7 +1356,7 @@ namespace UnityEngine.InputSystem
 
                 if (
                     // if feature is disabled we re-evaluate every call
-                    !InputSystem.manager.readValueCachingFeatureEnabled
+                    !InputSystem.s_Manager.readValueCachingFeatureEnabled
                     // if cached value is stale we re-evaluate and clear the flag
                     || m_CachedValueIsStale
                     // if a processor in stack needs to be re-evaluated, but unprocessedValue is still can be cached
@@ -1339,7 +1367,7 @@ namespace UnityEngine.InputSystem
                     m_CachedValueIsStale = false;
                 }
 #if DEBUG
-                else if (InputSystem.manager.paranoidReadValueCachingChecksEnabled)
+                else if (InputSystem.s_Manager.paranoidReadValueCachingChecksEnabled)
                 {
                     var oldUnprocessedValue = m_UnprocessedCachedValue;
                     var newUnprocessedValue = unprocessedValue;
@@ -1395,7 +1423,7 @@ namespace UnityEngine.InputSystem
 
                 if (
                     // if feature is disabled we re-evaluate every call
-                    !InputSystem.manager.readValueCachingFeatureEnabled
+                    !InputSystem.s_Manager.readValueCachingFeatureEnabled
                     // if cached value is stale we re-evaluate and clear the flag
                     || m_UnprocessedCachedValueIsStale
                 )
@@ -1404,7 +1432,7 @@ namespace UnityEngine.InputSystem
                     m_UnprocessedCachedValueIsStale = false;
                 }
 #if DEBUG
-                else if (InputSystem.manager.paranoidReadValueCachingChecksEnabled)
+                else if (InputSystem.s_Manager.paranoidReadValueCachingChecksEnabled)
                 {
                     var currentUnprocessedValue = ReadUnprocessedValueFromState(currentStatePtr);
                     if (CompareValue(ref currentUnprocessedValue, ref m_UnprocessedCachedValue))

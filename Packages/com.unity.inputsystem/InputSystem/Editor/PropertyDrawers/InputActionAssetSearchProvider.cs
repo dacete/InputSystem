@@ -1,8 +1,9 @@
-#if UNITY_EDITOR
+#if UNITY_EDITOR && UNITY_INPUT_SYSTEM_PROJECT_WIDE_ACTIONS
 using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.Search;
+using UnityEngine.Search;
 
 namespace UnityEngine.InputSystem.Editor
 {
@@ -10,6 +11,8 @@ namespace UnityEngine.InputSystem.Editor
     {
         const string k_AssetFolderSearchProviderId = "AssetsInputActionAssetSearchProvider";
         const string k_ProjectWideActionsSearchProviderId = "ProjectWideInputActionAssetSearchProvider";
+
+        const string k_ProjectWideAssetIdentificationString = " [Project Wide Input Actions]";
 
         internal static SearchProvider CreateInputActionAssetSearchProvider()
         {
@@ -98,17 +101,7 @@ namespace UnityEngine.InputSystem.Editor
 
                 if (!label.Contains(context.searchText, System.StringComparison.InvariantCultureIgnoreCase))
                     continue; // Ignore due to filtering
-
-                string itemId;
-
-                // 6.4 deprecated instance ids in favour of entity ids
-                #if UNITY_6000_4_OR_NEWER
-                itemId = asset.GetEntityId().ToString();
-                #else
-                itemId = asset.GetInstanceID().ToString();
-                #endif
-
-                yield return provider.CreateItem(context, itemId, label, createItemFetchDescription(asset),
+                yield return provider.CreateItem(context, asset.GetInstanceID().ToString(), label, createItemFetchDescription(asset),
                     thumbnail, asset);
             }
         }
@@ -117,6 +110,7 @@ namespace UnityEngine.InputSystem.Editor
         // consistent between CreateItem and additional fetchLabel calls.
         private static string FetchLabel(Object obj)
         {
+            // if (obj == InputSystem.actions) return $"{obj.name}{k_ProjectWideAssetIdentificationString}";
             return obj.name;
         }
 

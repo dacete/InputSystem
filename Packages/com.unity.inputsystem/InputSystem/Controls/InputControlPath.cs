@@ -25,8 +25,54 @@ namespace UnityEngine.InputSystem
     /// Control paths are a mini-language similar to regular expressions. They are used throughout
     /// the input system as string "addresses" of input controls. At runtime, they can be matched
     /// against the devices and controls present in the system to retrieve the actual endpoints to
-    /// receive input from. For detailed information about the structure and syntax of control paths,
-    /// refer to the [Control paths](xref:input-system-controls#control-paths) topic in the user manual.
+    /// receive input from.
+    ///
+    /// Like on a file system, a path is made up of components that are each separated by a
+    /// forward slash (<c>/</c>). Each such component in turn is made up of a set of fields that are
+    /// individually optional. However, one of the fields must be present (e.g. at least a name or
+    /// a wildcard).
+    ///
+    /// <example>
+    /// Field structure of each path component
+    /// <code>
+    /// &lt;Layout&gt;{Usage}#(DisplayName)Name
+    /// </code>
+    /// </example>
+    ///
+    /// * <c>Layout</c>: The name of the layout that the control must be based on (either directly or indirectly).
+    /// * <c>Usage</c>: The usage that the control or device has to have, i.e. must be found in <see
+    ///                 cref="InputControl.usages"/> This field can be repeated several times to require
+    ///                 multiple usages (e.g. <c>"{LeftHand}{Vertical}"</c>).
+    /// * <c>DisplayName</c>: The name that <see cref="InputControl.displayName"/> of the control or device
+    ///                       must match.
+    /// * <c>Name</c>: The name that <see cref="InputControl.name"/> or one of the entries in
+    ///                <see cref="InputControl.aliases"/> must match. Alternatively, this can be a
+    ///                wildcard (<c>*</c>) to match any name.
+    ///
+    /// Note that all matching is case-insensitive.
+    ///
+    /// <example>
+    /// Various examples of control paths
+    /// <code>
+    /// // Matches all gamepads (also gamepads *based* on the Gamepad layout):
+    /// "&lt;Gamepad&gt;"
+    ///
+    /// // Matches the "Submit" control on all devices:
+    /// "*/{Submit}"
+    ///
+    /// // Matches the key that prints the "a" character on the current keyboard layout:
+    /// "&lt;Keyboard&gt;/#(a)"
+    ///
+    /// // Matches the X axis of the left stick on a gamepad.
+    /// "&lt;Gamepad&gt;/leftStick/x"
+    ///
+    /// // Matches the orientation control of the right-hand XR controller:
+    /// "&lt;XRController&gt;{RightHand}/orientation"
+    ///
+    /// // Matches all buttons on a gamepad.
+    /// "&lt;Gamepad&gt;/&lt;Button&gt;"
+    /// </code>
+    /// </example>
     ///
     /// The structure of the API of this class is similar in spirit to <c>System.IO.Path</c>, i.e. it offers
     /// a range of static methods that perform various operations on path strings.
@@ -507,8 +553,8 @@ namespace UnityEngine.InputSystem
                     nextChar = str[++posInStr];
                 if (nextChar == '*')
                 {
-                    while (posInStr + 1 < strLength && str[posInStr + 1] == '*')
-                        ++posInStr;
+                    ////TODO: make sure we don't end up with ** here
+
                     if (posInStr == strLength - 1)
                         return true; // Wildcard at end of string so rest is matched.
 
@@ -1031,7 +1077,7 @@ namespace UnityEngine.InputSystem
             return lastMatch;
         }
 
-        internal enum PathComponentType
+        private enum PathComponentType
         {
             Name,
             DisplayName,
@@ -1039,7 +1085,7 @@ namespace UnityEngine.InputSystem
             Layout
         }
 
-        internal static bool MatchPathComponent(string component, string path, ref int indexInPath, PathComponentType componentType, int startIndexInComponent = 0)
+        private static bool MatchPathComponent(string component, string path, ref int indexInPath, PathComponentType componentType, int startIndexInComponent = 0)
         {
             Debug.Assert(component != null, "Component string is null");
             Debug.Assert(path != null, "Path is null");
@@ -1072,13 +1118,10 @@ namespace UnityEngine.InputSystem
                         break;
                     }
 
+                    ////TODO: allow only single '*' and recognize '**'
                     // If we've reached a '*' in the path, skip character in name.
                     if (nextCharInPath == '*')
                     {
-                        // Collapse consecutive '*' so matching logic here only needs to handle a single '*'.
-                        while (indexInPath + 1 < pathLength && path[indexInPath + 1] == '*')
-                            ++indexInPath;
-
                         // But first let's see if we have something after the wildcard that matches the rest of the component.
                         // This could be when, for example, we hit "T" on matching "leftTrigger" against "*Trigger". We have to stop
                         // gobbling up characters for the wildcard when reaching "Trigger" in the component name.

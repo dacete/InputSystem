@@ -249,9 +249,16 @@ namespace UnityEngine.InputSystem.OnScreen
             if (m_RaycastResults.Count == 0)
                 return;
 
-            // Only accept selection if the top-most UI hit is within this stick's hierarchy.
-            var topResult = m_RaycastResults[0];
-            if (!topResult.gameObject.transform.IsChildOf(transform))
+            var stickSelected = false;
+            foreach (var result in m_RaycastResults)
+            {
+                if (result.gameObject != gameObject) continue;
+
+                stickSelected = true;
+                break;
+            }
+
+            if (!stickSelected)
                 return;
 
             BeginInteraction(screenPosition, GetCameraFromCanvas());

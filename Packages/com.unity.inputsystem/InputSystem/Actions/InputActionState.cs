@@ -1143,7 +1143,7 @@ namespace UnityEngine.InputSystem
                 "Control start index out of range");
             Debug.Assert(controlStartIndex + numControls <= totalControlCount, "Control range out of bounds");
 
-            var manager = InputSystem.manager;
+            var manager = InputSystem.s_Manager;
             for (var i = 0; i < numControls; ++i)
             {
                 var controlIndex = controlStartIndex + i;
@@ -1151,13 +1151,6 @@ namespace UnityEngine.InputSystem
                 // We don't want to add multiple state monitors for the same control. This can happen if enabling
                 // single actions is mixed with enabling actions maps containing them.
                 if (IsControlEnabled(controlIndex))
-                    continue;
-
-                // We might end up here if an action map is enabled from e.g. an event processing callback such as
-                // InputAction.cancel event handler (ISXB-1767). In this case we must skip controls associated with
-                // a device that is not connected to the system (Have deviceIndex < 0). We check this here to not
-                // cause side effects if aborting later in the call-chain.
-                if (!controls[controlIndex].device.added)
                     continue;
 
                 var bindingIndex = controlIndexToBindingIndex[controlIndex];
@@ -1179,7 +1172,7 @@ namespace UnityEngine.InputSystem
                 "Control start index out of range");
             Debug.Assert(controlStartIndex + numControls <= totalControlCount, "Control range out of bounds");
 
-            var manager = InputSystem.manager;
+            var manager = InputSystem.s_Manager;
             for (var i = 0; i < numControls; ++i)
             {
                 var controlIndex = controlStartIndex + i;
@@ -1255,7 +1248,7 @@ namespace UnityEngine.InputSystem
 
             if (m_OnBeforeUpdateDelegate == null)
                 m_OnBeforeUpdateDelegate = OnBeforeInitialUpdate;
-            InputSystem.manager.onBeforeUpdate += m_OnBeforeUpdateDelegate;
+            InputSystem.s_Manager.onBeforeUpdate += m_OnBeforeUpdateDelegate;
             m_OnBeforeUpdateHooked = true;
         }
 
@@ -1264,7 +1257,7 @@ namespace UnityEngine.InputSystem
             if (!m_OnBeforeUpdateHooked)
                 return;
 
-            InputSystem.manager.onBeforeUpdate -= m_OnBeforeUpdateDelegate;
+            InputSystem.s_Manager.onBeforeUpdate -= m_OnBeforeUpdateDelegate;
             m_OnBeforeUpdateHooked = false;
         }
 
@@ -1297,7 +1290,7 @@ namespace UnityEngine.InputSystem
             // Go through all binding states and for every binding that needs an initial state check,
             // go through all bound controls and for each one that isn't in its default state, pretend
             // that the control just got actuated.
-            var manager = InputSystem.manager;
+            var manager = InputSystem.s_Manager;
             for (var bindingIndex = 0; bindingIndex < totalBindingCount; ++bindingIndex)
             {
                 ref var bindingState = ref bindingStates[bindingIndex];
@@ -1319,9 +1312,6 @@ namespace UnityEngine.InputSystem
 
                     // Leave any control alone that is already driving an interaction and/or action.
                     if (IsActiveControl(bindingIndex, controlIndex))
-                        continue;
-
-                    if (ShouldSkipInitialStateCheck(control))
                         continue;
 
                     if (!control.CheckStateIsAtDefault())
@@ -1349,22 +1339,6 @@ namespace UnityEngine.InputSystem
             manager.FireStateChangeNotifications();
 
             k_InputInitialActionStateCheckMarker.End();
-        }
-
-        private static bool ShouldSkipInitialStateCheck(InputControl control)
-        {
-            // UUM-100125
-            // Touch controls intentionally preserve state such as position even when no touch is currently active.
-            // During binding re-resolution this can make inactive touches look actuated and cause invalid triggers.
-            for (var current = control; current != null; current = current.parent)
-            {
-                if (current is TouchControl touchControl)
-                {
-                    return !touchControl.isInProgress;
-                }
-            }
-
-            return false;
         }
 
         // Called from InputManager when one of our state change monitors has fired.
@@ -1500,18 +1474,8 @@ namespace UnityEngine.InputSystem
                     if (m_OnBeforeUpdateHooked)
                         bindingStatePtr->initialStateCheckPending = false;
 
-                    var control = controls[controlIndex];
-
-                    // We might end up here if an action map is enabled from e.g. an event processing callback such as
-                    // InputAction.cancel event handler (ISXB-1767). In this case we must skip controls associated with
-                    // a device that is not connected to the system (Have deviceIndex < 0). We check this here to not
-                    // cause side effects if aborting later in the call-chain.
-                    if (control == null || !controls[controlIndex].device.added)
-                    {
-                        return;
-                    }
-
                     // Store magnitude. We do this once and then only read it from here.
+                    var control = controls[controlIndex];
                     trigger.magnitude = control.CheckStateIsAtDefault() ? 0f : control.magnitude;
                     controlMagnitudes[controlIndex] = trigger.magnitude;
 
@@ -1562,7 +1526,7 @@ namespace UnityEngine.InputSystem
 
                     // Check if we should suppress interaction processing notifications
                     m_Suppressed = (eventPtr != null) && eventPtr.handled &&
-                        InputSystem.manager.inputEventHandledPolicy == InputEventHandledPolicy.SuppressActionEventNotifications;
+                        InputSystem.s_Manager.inputEventHandledPolicy == InputEventHandledPolicy.SuppressActionEventNotifications;
 
                     // Check if we have multiple concurrent actuations on the same action. This may lead us
                     // to ignore certain inputs (e.g. when we get an input of lesser magnitude while already having
@@ -2151,7 +2115,7 @@ namespace UnityEngine.InputSystem
             Debug.Assert(trigger.controlIndex >= 0 && trigger.controlIndex < totalControlCount, "Control index out of range");
             Debug.Assert(trigger.interactionIndex >= 0 && trigger.interactionIndex < totalInteractionCount, "Interaction index out of range");
 
-            var manager = InputSystem.manager;
+            var manager = InputSystem.s_Manager;
             var currentTime = trigger.time;
             var control = controls[trigger.controlIndex];
             var interactionIndex = trigger.interactionIndex;
@@ -2180,7 +2144,7 @@ namespace UnityEngine.InputSystem
 
             ref var interactionState = ref interactionStates[interactionIndex];
 
-            var manager = InputSystem.manager;
+            var manager = InputSystem.s_Manager;
             manager.RemoveStateChangeMonitorTimeout(this, interactionState.timerMonitorIndex, interactionIndex);
 
             // Update state.
@@ -4332,19 +4296,6 @@ namespace UnityEngine.InputSystem
 
         internal static GlobalState s_GlobalState;
 
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-        private static void InitializeGlobalActionState()
-        {
-            // Appears we shouldn't really reset globals in case the domain reload is enabled.
-            // This is because in that case, we've just had the whole system init'ed via static ctors
-            // Moreover, later in GlobalInialize we skip initialization specifically in this case.
-            if (!InputSystem.IsDomainReloadDisabledForPlayMode())
-                return;
-
-            ResetGlobals();
-            s_GlobalState = default;
-        }
-
         internal static ISavedState SaveAndResetState()
         {
             // Save current state
@@ -4591,6 +4542,40 @@ namespace UnityEngine.InputSystem
                         break;
                     }
                 }
+            }
+        }
+
+        internal static void DeferredResolutionOfBindings()
+        {
+            ++InputActionMap.s_DeferBindingResolution;
+            try
+            {
+                if (InputActionMap.s_NeedToResolveBindings)
+                {
+                    for (var i = 0; i < s_GlobalState.globalList.length; ++i)
+                    {
+                        var handle = s_GlobalState.globalList[i];
+
+                        var state = handle.IsAllocated ? (InputActionState)handle.Target : null;
+                        if (state == null)
+                        {
+                            // Stale entry in the list. State has already been reclaimed by GC. Remove it.
+                            if (handle.IsAllocated)
+                                s_GlobalState.globalList[i].Free();
+                            s_GlobalState.globalList.RemoveAtWithCapacity(i);
+                            --i;
+                            continue;
+                        }
+
+                        for (var n = 0; n < state.totalMapCount; ++n)
+                            state.maps[n].ResolveBindingsIfNecessary();
+                    }
+                    InputActionMap.s_NeedToResolveBindings = false;
+                }
+            }
+            finally
+            {
+                --InputActionMap.s_DeferBindingResolution;
             }
         }
 

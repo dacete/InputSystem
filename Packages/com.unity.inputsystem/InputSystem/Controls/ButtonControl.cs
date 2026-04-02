@@ -1,4 +1,3 @@
-using System;
 using System.Runtime.CompilerServices;
 using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.Scripting;
@@ -16,7 +15,6 @@ namespace UnityEngine.InputSystem.Controls
     /// yield full floating-point values and may thus have a range of values. See
     /// <see cref="pressPoint"/> for how button presses on such buttons are handled.
     /// </remarks>
-    [Serializable]
     public class ButtonControl : AxisControl
     {
         private bool m_NeedsToCheckFramePress = false;

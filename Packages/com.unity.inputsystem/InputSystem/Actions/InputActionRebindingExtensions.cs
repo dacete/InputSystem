@@ -1326,8 +1326,8 @@ namespace UnityEngine.InputSystem
         ///
         ///     public void OnClick()
         ///     {
-        ///         var l_rebind = actionReference.action.PerformInteractiveRebinding().WithTargetBinding(bindingIndex).OnComplete(_ => UpdateDisplayText());
-        ///         l_rebind.Start();
+        ///         var rebind = actionReference.action.PerformInteractiveRebinding().WithTargetBinding(bindingIndex).OnComplete(_ => UpdateDisplayText());
+        ///         rebind.Start();
         ///     }
         ///
         ///     private void UpdateDisplayText()
@@ -2147,8 +2147,8 @@ namespace UnityEngine.InputSystem
 
                 m_StartTime = InputState.currentTime;
 
-                m_SavedInputEventHandledPolicy = InputSystem.manager.inputEventHandledPolicy;
-                InputSystem.manager.inputEventHandledPolicy = m_TargetInputEventHandledPolicy;
+                m_SavedInputEventHandledPolicy = InputSystem.s_Manager.inputEventHandledPolicy;
+                InputSystem.s_Manager.inputEventHandledPolicy = m_TargetInputEventHandledPolicy;
 
                 if (m_WaitSecondsAfterMatch > 0 || m_Timeout > 0)
                 {
@@ -2655,7 +2655,7 @@ namespace UnityEngine.InputSystem
                 UnhookOnEvent();
                 UnhookOnAfterUpdate();
 
-                InputSystem.manager.inputEventHandledPolicy = m_SavedInputEventHandledPolicy;
+                InputSystem.s_Manager.inputEventHandledPolicy = m_SavedInputEventHandledPolicy;
             }
 
             private void ThrowIfRebindInProgress()
@@ -2831,9 +2831,39 @@ namespace UnityEngine.InputSystem
             return rebind;
         }
 
-        internal static DeferBindingResolutionContext DeferBindingResolution()
+        /// <summary>
+        /// Temporarily suspend immediate re-resolution of bindings.
+        /// </summary>
+        /// <remarks>
+        /// When changing control setups, it may take multiple steps to get to the final setup but each individual
+        /// step may trigger bindings to be resolved again in order to update controls on actions (see <see cref="InputAction.controls"/>).
+        /// Using this struct, this can be avoided and binding resolution can be deferred to after the whole operation
+        /// is complete and the final binding setup is in place.
+        /// </remarks>
+        internal static DeferBindingResolutionWrapper DeferBindingResolution()
         {
-            return InputSystem.manager.DeferBindingResolution();
+            if (s_DeferBindingResolutionWrapper == null)
+                s_DeferBindingResolutionWrapper = new DeferBindingResolutionWrapper();
+            s_DeferBindingResolutionWrapper.Acquire();
+            return s_DeferBindingResolutionWrapper;
+        }
+
+        private static DeferBindingResolutionWrapper s_DeferBindingResolutionWrapper;
+
+        internal class DeferBindingResolutionWrapper : IDisposable
+        {
+            public void Acquire()
+            {
+                ++InputActionMap.s_DeferBindingResolution;
+            }
+
+            public void Dispose()
+            {
+                if (InputActionMap.s_DeferBindingResolution > 0)
+                    --InputActionMap.s_DeferBindingResolution;
+                if (InputActionMap.s_DeferBindingResolution == 0)
+                    InputActionState.DeferredResolutionOfBindings();
+            }
         }
     }
 }

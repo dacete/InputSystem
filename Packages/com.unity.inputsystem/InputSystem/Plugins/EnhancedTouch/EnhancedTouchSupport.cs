@@ -63,7 +63,10 @@ namespace UnityEngine.InputSystem.EnhancedTouch
         /// Whether enhanced touch support is currently enabled.
         /// </summary>
         /// <value>True if EnhancedTouch support has been enabled.</value>
-        public static bool enabled => Touch.s_GlobalState.enhancedTouchEnabled > 0;
+        public static bool enabled => s_Enabled > 0;
+
+        private static int s_Enabled;
+        private static InputSettings.UpdateMode s_UpdateMode;
 
         /// <summary>
         /// Enable enhanced touch support.
@@ -79,8 +82,8 @@ namespace UnityEngine.InputSystem.EnhancedTouch
         /// </remarks>
         public static void Enable()
         {
-            ++Touch.s_GlobalState.enhancedTouchEnabled;
-            if (Touch.s_GlobalState.enhancedTouchEnabled > 1)
+            ++s_Enabled;
+            if (s_Enabled > 1)
                 return;
 
             InputSystem.onDeviceChange += OnDeviceChange;
@@ -104,8 +107,8 @@ namespace UnityEngine.InputSystem.EnhancedTouch
         {
             if (!enabled)
                 return;
-            --Touch.s_GlobalState.enhancedTouchEnabled;
-            if (Touch.s_GlobalState.enhancedTouchEnabled > 0)
+            --s_Enabled;
+            if (s_Enabled > 0)
                 return;
 
             InputSystem.onDeviceChange -= OnDeviceChange;
@@ -128,7 +131,7 @@ namespace UnityEngine.InputSystem.EnhancedTouch
             Touch.s_GlobalState.editorState.Destroy();
             Touch.s_GlobalState.editorState = default;
             #endif
-            Touch.s_GlobalState.enhancedTouchEnabled = 0;
+            s_Enabled = 0;
         }
 
         private static void SetUpState()
@@ -138,7 +141,7 @@ namespace UnityEngine.InputSystem.EnhancedTouch
             Touch.s_GlobalState.editorState.updateMask = InputUpdateType.Editor;
             #endif
 
-            Touch.s_GlobalState.enhancedTouchUpdateMode = InputSystem.settings.updateMode;
+            s_UpdateMode = InputSystem.settings.updateMode;
 
             foreach (var device in InputSystem.devices)
                 OnDeviceChange(device, InputDeviceChange.Added);
@@ -183,7 +186,7 @@ namespace UnityEngine.InputSystem.EnhancedTouch
         private static void OnSettingsChange()
         {
             var currentUpdateMode = InputSystem.settings.updateMode;
-            if (Touch.s_GlobalState.enhancedTouchUpdateMode == currentUpdateMode)
+            if (s_UpdateMode == currentUpdateMode)
                 return;
             TearDownState();
             SetUpState();

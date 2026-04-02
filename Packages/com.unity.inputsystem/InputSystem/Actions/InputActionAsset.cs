@@ -895,7 +895,7 @@ namespace UnityEngine.InputSystem
         internal void MarkAsDirty()
         {
 #if UNITY_EDITOR
-            DirtyAssetTracker.TrackDirtyInputActionAsset(this);
+            InputSystem.TrackDirtyInputActionAsset(this);
 #endif
         }
 
@@ -953,7 +953,9 @@ namespace UnityEngine.InputSystem
 
         [SerializeField] internal InputActionMap[] m_ActionMaps;
         [SerializeField] internal InputControlScheme[] m_ControlSchemes;
+        #if UNITY_INPUT_SYSTEM_PROJECT_WIDE_ACTIONS
         [SerializeField] internal bool m_IsProjectWide;
+        #endif
 
         ////TODO: make this persistent across domain reloads
         /// <summary>
@@ -1014,11 +1016,6 @@ namespace UnityEngine.InputSystem
                 return;
             if ((parsedJson.maps?.Length ?? 0) > 0 && (parsedJson.version) < JsonVersion.Version1)
             {
-                List<NameAndParameters> parsedList = null;
-                var converted = new List<NameAndParameters>(8);
-                var updatedParameters = new List<NamedValue>(4);
-                var enumValuesCache = new Dictionary<Type, Array>(8);
-
                 for (var mi = 0; mi < parsedJson.maps.Length; ++mi)
                 {
                     var mapJson = parsedJson.maps[mi];
@@ -1029,49 +1026,44 @@ namespace UnityEngine.InputSystem
                         if (string.IsNullOrEmpty(raw))
                             continue;
 
-                        if (!NameAndParameters.ParseMultiple(raw, ref parsedList))
-                            continue;
-
-                        converted.Clear();
-
-                        for (int i = 0; i < parsedList.Count; ++i)
+                        var list = NameAndParameters.ParseMultiple(raw).ToList();
+                        var rebuilt = new List<string>(list.Count);
+                        foreach (var nap in list)
                         {
-                            var nap = parsedList[i];
                             var procType = InputSystem.TryGetProcessor(nap.name);
                             if (nap.parameters.Count == 0 || procType == null)
                             {
-                                converted.Add(nap);
+                                rebuilt.Add(nap.ToString());
                                 continue;
                             }
-                            updatedParameters.Clear();
-                            for (int k = 0; k < nap.parameters.Count; ++k)
-                            {
-                                var param = nap.parameters[k];
-                                var updatedPar = param;
 
-                                var fieldInfo = procType.GetField(param.name, BindingFlags.Public | BindingFlags.Instance);
-                                if (fieldInfo != null && fieldInfo.FieldType.IsEnum)
+                            var dict = nap.parameters.ToDictionary(p => p.name, p => p.value.ToString());
+                            var anyChanged = false;
+                            foreach (var field in procType.GetFields(BindingFlags.Public | BindingFlags.Instance).Where(f => f.FieldType.IsEnum))
+                            {
+                                if (dict.TryGetValue(field.Name, out var ordS) && int.TryParse(ordS, out var ord))
                                 {
-                                    var index = param.value.ToInt32();
-                                    if (index >= 0)
+                                    var values = Enum.GetValues(field.FieldType).Cast<object>().ToArray();
+                                    if (ord >= 0 && ord < values.Length)
                                     {
-                                        if (!enumValuesCache.TryGetValue(fieldInfo.FieldType, out var values))
-                                        {
-                                            values = Enum.GetValues(fieldInfo.FieldType);
-                                            enumValuesCache[fieldInfo.FieldType] = values;
-                                        }
-                                        if (index < values.Length)
-                                        {
-                                            var convertedValue = Convert.ToInt32(values.GetValue(index));
-                                            updatedPar = NamedValue.From(param.name, convertedValue);
-                                        }
+                                        dict[field.Name] = Convert.ToInt32(values[ord]).ToString();
+                                        anyChanged = true;
                                     }
                                 }
-                                updatedParameters.Add(updatedPar);
                             }
-                            converted.Add(NameAndParameters.Create(nap.name, updatedParameters));
+
+                            if (!anyChanged)
+                            {
+                                rebuilt.Add(nap.ToString());
+                            }
+                            else
+                            {
+                                var paramText = string.Join(",", dict.Select(kv => $"{kv.Key}={kv.Value}"));
+                                rebuilt.Add($"{nap.name}({paramText})");
+                            }
                         }
-                        actionJson.processors = NameAndParameters.ToSerializableString(converted);
+
+                        actionJson.processors = string.Join(";", rebuilt);
                         mapJson.actions[ai] = actionJson;
                     }
                     parsedJson.maps[mi] = mapJson;

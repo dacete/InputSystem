@@ -1,8 +1,7 @@
-#if UNITY_EDITOR
+#if UNITY_EDITOR && UNITY_INPUT_SYSTEM_PROJECT_WIDE_ACTIONS
 using CmdEvents = UnityEngine.InputSystem.Editor.InputActionsEditorConstants.CommandEvents;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEditor;
 using UnityEngine.UIElements;
 
 namespace UnityEngine.InputSystem.Editor
@@ -21,8 +20,7 @@ namespace UnityEngine.InputSystem.Editor
             m_ListViewSelectionChangeFilter = new CollectionViewSelectionChangeFilter(m_ListView);
             m_ListViewSelectionChangeFilter.selectedIndicesChanged += (selectedIndices) =>
             {
-                if (m_ListView.selectedItem is ActionMapData mapData)
-                    Dispatch(Commands.SelectActionMap(mapData.mapName));
+                Dispatch(Commands.SelectActionMap(((ActionMapData)m_ListView.selectedItem).mapName));
             };
 
             m_ListView.bindItem = (element, i) =>
@@ -67,8 +65,6 @@ namespace UnityEngine.InputSystem.Editor
             CreateSelector(Selectors.GetActionMapNames, Selectors.GetSelectedActionMap, (actionMapNames, actionMap, state) => new ViewState(actionMap, actionMapNames, state.GetDisabledActionMaps(actionMapNames.ToList())));
 
             m_AddActionMapButton = root.Q<Button>("add-new-action-map-button");
-            m_AddActionMapButton.AddToClassList(EditorGUIUtility.isProSkin ? "add-button-dark-theme" : "add-button");
-
             m_AddActionMapButton.clicked += AddActionMap;
 
             ContextMenu.GetContextMenuForActionMapsEmptySpace(this, root.Q<VisualElement>("rclick-area-to-add-new-action-map"));

@@ -9,7 +9,9 @@ using Unity.Collections.LowLevel.Unsafe;
 using Unity.Profiling;
 using UnityEngine.InputSystem.Layouts;
 using UnityEngine.Scripting;
+#if UNITY_2021_2_OR_NEWER
 using UnityEngine.Pool;
+#endif
 
 // HID support is currently broken in 32-bit Windows standalone players. Consider 32bit Windows players unsupported for now.
 #if UNITY_STANDALONE_WIN && !UNITY_64
@@ -383,7 +385,7 @@ namespace UnityEngine.InputSystem.HID
                     var yElementParameters = yElement.DetermineParameters();
 
                     builder.AddControl(stickName + "/x")
-                        .WithFormat(xElement.DetermineFormat())
+                        .WithFormat(xElement.isSigned ? InputStateBlock.FormatSBit : InputStateBlock.FormatBit)
                         .WithByteOffset((uint)(xElement.reportOffsetInBits / 8 - byteOffset))
                         .WithBitOffset((uint)(xElement.reportOffsetInBits % 8))
                         .WithSizeInBits((uint)xElement.reportSizeInBits)
@@ -392,7 +394,7 @@ namespace UnityEngine.InputSystem.HID
                         .WithProcessors(xElement.DetermineProcessors());
 
                     builder.AddControl(stickName + "/y")
-                        .WithFormat(yElement.DetermineFormat())
+                        .WithFormat(yElement.isSigned ? InputStateBlock.FormatSBit : InputStateBlock.FormatBit)
                         .WithByteOffset((uint)(yElement.reportOffsetInBits / 8 - byteOffset))
                         .WithBitOffset((uint)(yElement.reportOffsetInBits % 8))
                         .WithSizeInBits((uint)yElement.reportSizeInBits)
@@ -978,6 +980,7 @@ namespace UnityEngine.InputSystem.HID
 
             public static HIDDeviceDescriptor FromJson(string json)
             {
+#if UNITY_2021_2_OR_NEWER
                 try
                 {
                     // HID descriptors, when formatted correctly, are always json strings with no whitespace and a
@@ -1135,6 +1138,9 @@ namespace UnityEngine.InputSystem.HID
                     k_HIDParseDescriptorFallback.End();
                     return descriptor;
                 }
+#else
+                return JsonUtility.FromJson<HIDDeviceDescriptor>(json);
+#endif
             }
         }
 

@@ -397,7 +397,7 @@ namespace UnityEngine.InputSystem
                 catch (Exception exception)
                 {
                     Debug.LogError(
-                        $"Exception '{exception.GetType().Name}' thrown from state change monitor '{(listener.monitor?.GetType().Name ?? "null")}' on '{(listener.control?.ToString() ?? "null")}'");
+                        $"Exception '{exception.GetType().Name}' thrown from state change monitor '{listener.monitor.GetType().Name}' on '{listener.control}'");
                     Debug.LogException(exception);
                 }
 

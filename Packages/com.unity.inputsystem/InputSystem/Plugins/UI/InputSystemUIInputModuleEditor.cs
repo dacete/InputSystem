@@ -13,7 +13,6 @@ namespace UnityEngine.InputSystem.UI.Editor
     [InitializeOnLoad]
     internal class InputSystemUIInputModuleEditor : UnityEditor.Editor
     {
-        // ISX-1966 - It's unclear if this initializer will work correctly with CoreCLR and needs to be investigated.
         static InputSystemUIInputModuleEditor()
         {
 #if UNITY_6000_0_OR_NEWER && ENABLE_INPUT_SYSTEM

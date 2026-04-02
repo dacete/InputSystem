@@ -102,7 +102,6 @@ namespace UnityEngine.InputSystem.Users
         public uint id => m_Id;
 
         ////TODO: bring documentation for these back when user management is implemented on Xbox and PS
-        ////For now the docs are filtered out (see Documentation~/filter.yml)
         public InputUserAccountHandle? platformUserAccountHandle => s_GlobalState.allUserData[index].platformUserAccountHandle;
         public string platformUserAccountName => s_GlobalState.allUserData[index].platformUserAccountName;
         public string platformUserAccountId => s_GlobalState.allUserData[index].platformUserAccountId;
@@ -768,7 +767,6 @@ namespace UnityEngine.InputSystem.Users
             return s_GlobalState.allUsers[userIndex];
         }
 
-        ////Doc is filtered out (see Documentation~/filter.yml)
         public static InputUser? FindUserByAccount(InputUserAccountHandle platformUserAccountHandle)
         {
             if (platformUserAccountHandle == default(InputUserAccountHandle))
@@ -1877,13 +1875,6 @@ namespace UnityEngine.InputSystem.Users
         }
 
         private static GlobalState s_GlobalState;
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void InitializeGlobalUserState()
-        {
-            ResetGlobals();
-            s_GlobalState = default;
-        }
 
         internal static ISavedState SaveAndResetState()
         {

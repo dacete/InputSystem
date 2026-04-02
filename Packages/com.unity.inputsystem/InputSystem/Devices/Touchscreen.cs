@@ -8,6 +8,25 @@ using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.InputSystem.Utilities;
 using Unity.Profiling;
 
+////TODO: property that tells whether a Touchscreen is multi-touch capable
+
+////TODO: property that tells whether a Touchscreen supports pressure
+
+////TODO: add support for screen orientation
+
+////TODO: touch is hardwired to certain memory layouts ATM; either allow flexibility or make sure the layouts cannot be changed
+
+////TODO: startTimes are baked *external* times; reset touch when coming out of play mode
+
+////TODO: detect and diagnose touchId=0 events
+
+////REVIEW: where should we put handset vibration support? should that sit on the touchscreen class? be its own separate device?
+
+////REVIEW: Given that Touchscreen is no use for polling, should we remove Touchscreen.current?
+
+////REVIEW: Should Touchscreen reset individual TouchControls to default(TouchState) after a touch has ended? This would allow
+////        binding to a TouchControl as a whole and the action would correctly cancel if the touch ends
+
 namespace UnityEngine.InputSystem.LowLevel
 {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1028:EnumStorageShouldBeInt32", Justification = "byte to correspond to TouchState layout.")]
@@ -520,14 +539,6 @@ namespace UnityEngine.InputSystem
         /// <value>Current touch screen.</value>
         public new static Touchscreen current { get; internal set; }
 
-        /// <summary>
-        /// The current global settings for Touchscreen devices.
-        /// </summary>
-        /// <remarks>
-        /// These are cached values taken from <see cref="InputSettings"/>.
-        /// </remarks>
-        internal static TouchscreenSettings settings { get; set; }
-
         /// <inheritdoc />
         public override void MakeCurrent()
         {
@@ -617,14 +628,14 @@ namespace UnityEngine.InputSystem
                 //       that to do so we would have to add another record to keep track of timestamps for each touch. And
                 //       since we know the maximum time that a tap can take, we have a reasonable estimate for when a prior
                 //       tap must have ended.
-                if (touchStatePtr->tapCount > 0 && InputState.currentTime >= touchStatePtr->startTime + settings.tapTime + settings.tapDelayTime)
+                if (touchStatePtr->tapCount > 0 && InputState.currentTime >= touchStatePtr->startTime + s_TapTime + s_TapDelayTime)
                     InputState.Change(touches[i].tapCount, (byte)0);
             }
 
             var primaryTouchState = (TouchState*)((byte*)statePtr + stateBlock.byteOffset);
             if (primaryTouchState->delta != default)
                 InputState.Change(primaryTouch.delta, Vector2.zero);
-            if (primaryTouchState->tapCount > 0 && InputState.currentTime >= primaryTouchState->startTime + settings.tapTime + settings.tapDelayTime)
+            if (primaryTouchState->tapCount > 0 && InputState.currentTime >= primaryTouchState->startTime + s_TapTime + s_TapDelayTime)
                 InputState.Change(primaryTouch.tapCount, (byte)0);
 
             k_TouchscreenUpdateMarker.End();
@@ -713,11 +724,11 @@ namespace UnityEngine.InputSystem
 
                         // Detect taps.
                         var isTap = newTouchState.isNoneEndedOrCanceled &&
-                            (eventPtr.time - newTouchState.startTime) <= settings.tapTime &&
+                            (eventPtr.time - newTouchState.startTime) <= s_TapTime &&
                             ////REVIEW: this only takes the final delta to start position into account, not the delta over the lifetime of the
                             ////        touch; is this robust enough or do we need to make sure that we never move more than the tap radius
                             ////        over the entire lifetime of the touch?
-                            (newTouchState.position - newTouchState.startPosition).sqrMagnitude <= settings.tapRadiusSquared;
+                            (newTouchState.position - newTouchState.startPosition).sqrMagnitude <= s_TapRadiusSquared;
                         if (isTap)
                             newTouchState.tapCount = (byte)(currentTouchState[i].tapCount + 1);
                         else
@@ -1036,15 +1047,9 @@ namespace UnityEngine.InputSystem
             InputState.Change(control, ref state, eventPtr: eventPtr);
             state.isTapRelease = false;
         }
-    }
 
-    /// <summary>
-    /// Cached settings retrieved from <see cref="InputSettings"/>.
-    /// </summary>
-    internal struct TouchscreenSettings
-    {
-        public float tapTime;
-        public float tapDelayTime;
-        public float tapRadiusSquared;
+        internal static float s_TapTime;
+        internal static float s_TapDelayTime;
+        internal static float s_TapRadiusSquared;
     }
 }

@@ -1,4 +1,4 @@
-#if UNITY_EDITOR
+#if UNITY_EDITOR && UNITY_INPUT_SYSTEM_PROJECT_WIDE_ACTIONS
 using System;
 using System.Linq;
 using UnityEditor;
@@ -71,4 +71,4 @@ namespace UnityEngine.InputSystem.Editor
     }
 }
 
-#endif // UNITY_EDITOR
+#endif // UNITY_EDITOR && UNITY_INPUT_SYSTEM_PROJECT_WIDE_ACTIONS

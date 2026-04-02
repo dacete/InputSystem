@@ -37,7 +37,7 @@ namespace UnityEngine.InputSystem.Editor
             this.children = new List<MatchingControlPath>();
         }
 
-#if UNITY_EDITOR
+#if UNITY_EDITOR && UNITY_INPUT_SYSTEM_PROJECT_WIDE_ACTIONS
         public static List<TreeViewItemData<MatchingControlPath>> BuildMatchingControlPathsTreeData(List<MatchingControlPath> matchingControlPaths)
         {
             int id = 0;

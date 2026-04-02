@@ -2,7 +2,6 @@ using System;
 using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine.Analytics;
 using UnityEngine.InputSystem.Layouts;
-using UnityEngineInternal.Input;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -110,15 +109,12 @@ namespace UnityEngine.InputSystem.LowLevel
         /// </remarks>
         Action<int, string> onDeviceDiscovered { get; set; }
 
-#if !UNITY_INPUTSYSTEM_SUPPORTS_FOCUS_EVENTS
         /// <summary>
         /// Set delegate to call when the application changes focus.
         /// </summary>
         /// <seealso cref="Application.onFocusChanged"/>
         Action<bool> onPlayerFocusChanged { get; set; }
-#endif
 
-        FocusFlags focusState { get; set; }
         /// <summary>
         // Is true when the player or game view has focus.
         /// </summary>
@@ -187,11 +183,11 @@ namespace UnityEngine.InputSystem.LowLevel
 
         // If analytics are enabled, the runtime receives analytics events from the input manager.
         // See InputAnalytics.
-#if UNITY_ANALYTICS || UNITY_EDITOR
+        #if UNITY_ANALYTICS || UNITY_EDITOR
         void SendAnalytic(InputAnalytics.IInputAnalytic analytic);
-#endif // UNITY_ANALYTICS || UNITY_EDITOR
+        #endif // UNITY_ANALYTICS || UNITY_EDITOR
 
-#if UNITY_EDITOR
+        #if UNITY_EDITOR
         Action<PlayModeStateChange> onPlayModeChanged { get; set; }
         Action onProjectChange { get; set; }
         bool isInPlayMode { get;  }
@@ -201,7 +197,7 @@ namespace UnityEngine.InputSystem.LowLevel
         Func<IntPtr, bool> onUnityRemoteMessage { set; }
         void SetUnityRemoteGyroEnabled(bool value);
         void SetUnityRemoteGyroUpdateInterval(float interval);
-#endif
+        #endif
     }
 
     internal static class InputRuntime

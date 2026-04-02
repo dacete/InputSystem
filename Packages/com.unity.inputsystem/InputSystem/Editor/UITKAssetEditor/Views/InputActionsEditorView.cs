@@ -1,4 +1,4 @@
-#if UNITY_EDITOR
+#if UNITY_EDITOR && UNITY_INPUT_SYSTEM_PROJECT_WIDE_ACTIONS
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,8 +23,6 @@ namespace UnityEngine.InputSystem.Editor
         private readonly ToolbarButton m_SaveButton;
 
         private readonly Action m_SaveAction;
-
-        private ControlSchemesView m_ControlSchemesView;
 
         public InputActionsEditorView(VisualElement root, StateContainer stateContainer, bool isProjectSettings,
                                       Action saveAction)
@@ -106,18 +104,6 @@ namespace UnityEngine.InputSystem.Editor
                 });
 
             s_OnPasteCutElements.Add(this);
-
-            Undo.undoRedoPerformed += CloseControlSchemeView;
-        }
-
-        private void CloseControlSchemeView()
-        {
-            m_ControlSchemesView?.Cancel();
-        }
-
-        public bool IsControlSchemeViewActive()
-        {
-            return m_ControlSchemesView != null;
         }
 
         private void OnReset()
@@ -170,8 +156,9 @@ namespace UnityEngine.InputSystem.Editor
 
             if (viewState.controlSchemes.Any())
             {
-                var elementAtOrDefault = viewState.controlSchemes.ElementAtOrDefault(viewState.selectedControlSchemeIndex);
-                m_ControlSchemesToolbar.text = elementAtOrDefault == default ? "All Control Schemes" : elementAtOrDefault.name;
+                m_ControlSchemesToolbar.text = viewState.selectedControlSchemeIndex == -1
+                    ? "All Control Schemes"
+                    : viewState.controlSchemes.ElementAt(viewState.selectedControlSchemeIndex).name;
 
                 m_ControlSchemesToolbar.menu.AppendAction("All Control Schemes", _ => SelectControlScheme(-1),
                     viewState.selectedControlSchemeIndex == -1 ? DropdownMenuAction.Status.Checked : DropdownMenuAction.Status.Normal);
@@ -199,7 +186,7 @@ namespace UnityEngine.InputSystem.Editor
                 return;
             }
             m_DevicesToolbar.SetEnabled(true);
-            var currentControlScheme = viewState.controlSchemes.ElementAtOrDefault(viewState.selectedControlSchemeIndex);
+            var currentControlScheme = viewState.controlSchemes.ElementAt(viewState.selectedControlSchemeIndex);
             if (viewState.selectedDeviceIndex == -1)
                 m_DevicesToolbar.text = "All Devices";
 
@@ -241,14 +228,10 @@ namespace UnityEngine.InputSystem.Editor
 
         private void ShowControlSchemeEditor(VisualElement parent, bool updateExisting = false)
         {
-            m_ControlSchemesView = CreateChildView(new ControlSchemesView(parent, stateContainer, updateExisting));
-            m_ControlSchemesView.UpdateView(stateContainer.GetState());
+            var controlSchemesView = CreateChildView(new ControlSchemesView(parent, stateContainer, updateExisting));
+            controlSchemesView.UpdateView(stateContainer.GetState());
 
-            m_ControlSchemesView.OnClosing += _ =>
-            {
-                DestroyChildView(m_ControlSchemesView);
-                m_ControlSchemesView = null;
-            };
+            controlSchemesView.OnClosing += _ => DestroyChildView(controlSchemesView);
         }
 
         private void SelectControlScheme(int controlSchemeIndex)
@@ -275,7 +258,6 @@ namespace UnityEngine.InputSystem.Editor
         {
             base.DestroyView();
             s_OnPasteCutElements.Remove(this);
-            Undo.undoRedoPerformed -= CloseControlSchemeView;
         }
 
         public void OnPaste(InputActionsEditorState state)

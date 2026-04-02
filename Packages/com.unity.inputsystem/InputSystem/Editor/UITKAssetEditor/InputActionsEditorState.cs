@@ -1,4 +1,4 @@
-#if UNITY_EDITOR
+#if UNITY_EDITOR && UNITY_INPUT_SYSTEM_PROJECT_WIDE_ACTIONS
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -59,8 +59,6 @@ namespace UnityEngine.InputSystem.Editor
             return cutActionMapIndex ?? -1;
         }
     }
-
-    [Serializable]
     internal struct InputActionsEditorState
     {
         public int selectedActionMapIndex { get {return m_selectedActionMapIndex; } }

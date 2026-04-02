@@ -250,7 +250,7 @@ namespace UnityEngine.InputSystem
         /// being true.
         ///
         /// Changing the phase of the interaction while a timeout is running will implicitly cancel
-        /// the timeout. For example, you must call <see cref="Started()"/> before calling `SetTimeout()`.
+        /// the timeout.
         ///
         /// <example>
         /// <code>

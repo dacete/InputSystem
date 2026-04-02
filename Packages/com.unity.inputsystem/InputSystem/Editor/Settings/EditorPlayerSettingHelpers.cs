@@ -20,11 +20,17 @@ namespace UnityEngine.InputSystem.Editor
         {
             get
             {
+#if UNITY_2020_2_OR_NEWER
                 var property = GetPropertyOrNull(kActiveInputHandler);
                 return property == null || ActiveInputHandlerToTuple(property.intValue).newSystemEnabled;
+#else
+                var property = GetPropertyOrNull(kEnableNewSystemProperty);
+                return property == null || property.boolValue;
+#endif
             }
             set
             {
+#if UNITY_2020_2_OR_NEWER
                 var property = GetPropertyOrNull(kActiveInputHandler);
                 if (property != null)
                 {
@@ -37,6 +43,18 @@ namespace UnityEngine.InputSystem.Editor
                 {
                     Debug.LogError($"Cannot find '{kActiveInputHandler}' in player settings");
                 }
+#else
+                var property = GetPropertyOrNull(kEnableNewSystemProperty);
+                if (property != null)
+                {
+                    property.boolValue = value;
+                    property.serializedObject.ApplyModifiedProperties();
+                }
+                else
+                {
+                    Debug.LogError($"Cannot find '{kEnableNewSystemProperty}' in player settings");
+                }
+#endif
             }
         }
 
@@ -48,11 +66,17 @@ namespace UnityEngine.InputSystem.Editor
         {
             get
             {
+#if UNITY_2020_2_OR_NEWER
                 var property = GetPropertyOrNull(kActiveInputHandler);
                 return property == null || ActiveInputHandlerToTuple(property.intValue).oldSystemEnabled;
+#else
+                var property = GetPropertyOrNull(kDisableOldSystemProperty);
+                return property == null || !property.boolValue;
+#endif
             }
             set
             {
+#if UNITY_2020_2_OR_NEWER
                 var property = GetPropertyOrNull(kActiveInputHandler);
                 if (property != null)
                 {
@@ -65,9 +89,23 @@ namespace UnityEngine.InputSystem.Editor
                 {
                     Debug.LogError($"Cannot find '{kActiveInputHandler}' in player settings");
                 }
+#else
+                var property = GetPropertyOrNull(kDisableOldSystemProperty);
+                if (property != null)
+                {
+                    property.boolValue = !value;
+                    property.serializedObject.ApplyModifiedProperties();
+                }
+                else
+                {
+                    Debug.LogError($"Cannot find '{kDisableOldSystemProperty}' in player settings");
+                }
+#endif
             }
         }
 
+
+#if UNITY_2020_2_OR_NEWER
         private const string kActiveInputHandler = "activeInputHandler";
 
         private enum InputHandler
@@ -113,6 +151,11 @@ namespace UnityEngine.InputSystem.Editor
                     return (int)InputHandler.OldInputManager;
             }
         }
+
+#else
+        private const string kEnableNewSystemProperty = "enableNativePlatformBackendsForNewInputSystem";
+        private const string kDisableOldSystemProperty = "disableOldInputManagerSupport";
+#endif
 
         private static SerializedProperty GetPropertyOrNull(string name)
         {

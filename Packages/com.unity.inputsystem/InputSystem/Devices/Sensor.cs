@@ -100,7 +100,8 @@ namespace UnityEngine.InputSystem
         /// Note that when setting sampling frequencies, there may be limits on the range of frequencies
         /// supported by the underlying hardware/platform.
         ///
-        /// To support setting frequencies, it must implement <see cref="SetSamplingFrequencyCommand"/>.
+        /// To support querying sampling frequencies, a sensor device must implement <see cref="QuerySamplingFrequencyCommand"/>.
+        /// To support setting frequencies, it must implemenet <see cref="SetSamplingFrequencyCommand"/>.
         /// </remarks>
         /// <exception cref="NotSupportedException">Thrown when reading the property and the underlying
         /// sensor does not support querying of sampling frequencies.</exception>
@@ -654,8 +655,7 @@ namespace UnityEngine.InputSystem
     /// <summary>
     /// Hinge angle sensor.
     /// This sensor is usually available on foldable devices.
-    /// > [!NOTE]
-    /// > The step resolution for angle is device dependentent, on Android you can query the sensor resolution by querying device capabilities.
+    ///  Note: The step resolution for angle is device dependentent, on Android you can query the sensor resolution by querying device capabilities.
     /// </summary>
     [InputControlLayout(displayName = "Hinge Angle")]
     public class HingeAngle : Sensor
