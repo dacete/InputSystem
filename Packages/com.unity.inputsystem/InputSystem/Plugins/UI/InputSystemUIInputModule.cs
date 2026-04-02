@@ -426,7 +426,7 @@ namespace UnityEngine.InputSystem.UI
 
             // Sync position.
             var pointerType = eventData.pointerType;
-            if (pointerType == UIPointerType.MouseOrPen && Cursor.lockState == CursorLockMode.Locked)
+            if (pointerType == UIPointerType.MouseOrPen && Cursor.lockState == CursorLockMode.Locked && !eventData.device.displayName.Contains("VirtualMouse"))
             {
                 eventData.position = m_CursorLockBehavior == CursorLockBehavior.OutsideScreen ?
                     new Vector2(-1, -1) :
